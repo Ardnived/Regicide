@@ -315,4 +315,4 @@ def evaluate_function(func, params):
 
     return value
 
-from regicide.data import items, rooms, units, skills, effects #load data
+from regicide.data import items, rooms, units, skills #load data

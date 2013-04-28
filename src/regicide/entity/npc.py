@@ -6,6 +6,7 @@ Created on Mar 24, 2013
 import abc
 from random import randint
 from regicide.entity.entity import Entity
+from regicide import actions
 
 class NPC(Entity):
     '''
@@ -39,7 +40,7 @@ class NPC(Entity):
         
         tile = game.map.get_tile(*target)
         if (tile is not None and tile.is_passable()):
-            game.move_entity_to(self, *target)
+            game.execute(actions.misc.Move(), *target)
         
-        return randint(60, 120)
+        game.end_turn(randint(60, 120))
     

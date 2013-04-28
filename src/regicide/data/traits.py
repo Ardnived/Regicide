@@ -25,18 +25,18 @@ SPIRIT = Blueprint(
     },
 )
 
-SWORD_APTITUDE = Blueprint(
+BLADE_APTITUDE = Blueprint(
     parents = TRAIT,
     domains = {
         'type': 'skill',
-        'gear': 'sword',
+        'gear': 'blade',
     },
     properties = {
-        'name': "Sword Aptitude",
+        'name': "Blade Aptitude",
         'description': "weapon skill",
         'modifiers': {
             properties.max_hp: ['+', 4],
-            properties.swords: ['+', 5],
+            properties.blades: ['+', 5],
         },
     }
 )
@@ -45,7 +45,6 @@ DEMON_PACT = Blueprint(
     parents = TRAIT,
     domains = {
         'type': 'skill',
-        'gear': 'sword',
     },
     properties = {
         'name': "Pact With Xashak",

@@ -102,7 +102,7 @@ SWORD = Blueprint(
             properties.damage: ['+', 2],
         },
         'skills': {
-            'wield': properties.swords,
+            'wield': properties.blades,
             'equip': properties.dexterity,
         },
     },

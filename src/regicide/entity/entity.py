@@ -8,14 +8,13 @@ Entities get turns to act.
 '''
 import abc
 import types
+from random import randint
 from pyglet import sprite
+from regicide.model import event
 from regicide.resources import visual
 from regicide.entity import properties
 
-class Entity(object):
-    '''
-    classdocs
-    '''
+class Entity(event.FilterDispatcher, event.EventDispatcher):
     __metaclass__ = abc.ABCMeta
     
     def __init__(self, template, x, y):
@@ -33,6 +32,9 @@ class Entity(object):
         self._equipment = {}
         self._inventory = []
         self._traits = []
+        self._actions = []
+        self._spirits = []
+        self._effects = []
         self._modifiers = {}
         
         self._base_properties = {}
@@ -50,6 +52,8 @@ class Entity(object):
         self.set(properties.perception, template.properties['perception'])
         
         self.recalculate_properties()
+        
+    # ==================================
         
     def get(self, prop, base=False):
         '''
@@ -76,9 +80,65 @@ class Entity(object):
         '''
         self._base_properties[prop] = value
         
+        if (value <= 0 and (prop.type == properties.Property.TYPE_ATTR or prop == properties.hp)):
+            #self.die()
+            pass
+    
     @property
     def properties(self):
         return self._properties
+        
+    # ==================================
+
+    def add_spirit(self, spirit):
+        '''
+        Adds the given Master object to this entity's trait list,
+        and adds the Action's modifiers to the entity as well.
+        '''
+        self._spirits.append(spirit)
+        self.add_modifier(spirit)
+        self.add_handler(spirit)
+        
+        if (self.primary_spirit is None):
+            self.primary_spirit = spirit
+
+    def remove_spirit(self, spirit):
+        '''
+        Removes an action from this entity.
+        '''
+        self._spirits.remove(spirit)
+        self.remove_modifier(spirit)
+        self.remove_handler(spirit)
+        
+        if (self.primary_spirit == spirit):
+            self.primary_spirit = self._spirits[randint(0, len(self._spirits))]
+        
+    @property
+    def spirits(self):
+        return self._spirits
+        
+    # ==================================
+
+    def add_action(self, action):
+        '''
+        Adds the given Master object to this entity's trait list,
+        and adds the Action's modifiers to the entity as well.
+        '''
+        self._actions.append(action)
+        self.add_handler(action)
+
+    def remove_action(self, action):
+        '''
+        Removes an action from this entity.
+        '''
+        self._actions.remove(action)
+        self.remove_handler(action)
+        
+    @property
+    def actions(self):
+        return self._actions
+        
+    # ==================================
 
     def add_trait(self, trait):
         '''
@@ -89,6 +149,7 @@ class Entity(object):
         '''
         self._traits.append(trait)
         self.add_modifier(trait)
+        self.add_handler(trait)
 
     def remove_trait(self, trait):
         '''
@@ -98,10 +159,35 @@ class Entity(object):
         '''
         self._traits.remove(trait)
         self.remove_modifier(trait)
+        self.remove_handler(trait)
         
     @property
     def traits(self):
         return self._traits
+        
+    # ==================================
+
+    def add_effect(self, effect):
+        '''
+        Adds an effect to this entity.
+        '''
+        self._effects.append(effect)
+        self.add_modifier(effect)
+        self.add_handler(effect)
+
+    def remove_effect(self, effect):
+        '''
+        Removes an effect from this entity.
+        '''
+        self._effects.remove(effect)
+        self.remove_modifier(effect)
+        self.remove_handler(effect)
+        
+    @property
+    def effects(self):
+        return self._effects
+        
+    # ==================================
         
     def add_item(self, item):
         '''
@@ -122,6 +208,8 @@ class Entity(object):
     @property
     def inventory(self):
         return self._inventory
+        
+    # ==================================
     
     def equip_item(self, item):
         '''
@@ -145,6 +233,7 @@ class Entity(object):
         if (equip_size <= free_space):
             self._equipment[equip_slot].append(item)
             self.add_modifier(item)
+            self.add_handler(item)
             return True
         else:
             return False
@@ -159,6 +248,7 @@ class Entity(object):
         if (self._equipment.has_key(equip_slot) and item in self._equipment[equip_slot]):
             self._equipment[equip_slot].remove(item)
             self.remove_modifier(item)
+            self.remove_handler(item)
             return True
         else:
             return False
@@ -172,6 +262,8 @@ class Entity(object):
     @property
     def equipment(self):
         return self._equipment
+        
+    # ==================================
         
     def add_modifier(self, modifier_set):
         '''
@@ -197,7 +289,7 @@ class Entity(object):
             self._modifiers[key].pop(modifier_set)
         
         self.recalculate_properties(properties.keys())
-        
+    
     def recalculate_properties(self, update_list = None):
         '''
         Recalculates each property in a given list.
@@ -244,4 +336,11 @@ class Entity(object):
     @property
     def modifiers(self):
         return self._modifiers
+        
+    # ==================================
+    
+Entity.register_dispatch_type('modify_property');
+Entity.register_dispatch_type('on_turn_start');
+Entity.register_dispatch_type('on_turn_end');
+Entity.register_dispatch_type('on_action');
 

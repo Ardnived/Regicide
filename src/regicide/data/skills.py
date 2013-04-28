@@ -37,7 +37,7 @@ DEFENSIVE_STANCE = Blueprint(
         'name': "Defensive Stance",
         'modifiers': {
             properties.max_hp: ['+', 4],
-            properties.swords: ['+', 5],
+            properties.blades: ['+', 5],
         },
         'action': do_test_action,
     }
@@ -60,7 +60,7 @@ HEX = Blueprint(
         'name': "Hex",
         'modifiers': {
             properties.max_hp: ['+', 4],
-            properties.swords: ['+', 5],
+            properties.blades: ['+', 5],
         },
         'action': do_test_action,
     }

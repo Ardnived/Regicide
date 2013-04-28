@@ -282,7 +282,7 @@ class PlayerCard(Layer):
         self.mana = self.create_label(5, 285, 4)
         self.mana.color = (135, 206, 235, 255)
         self.attributes = self.create_label(5, 310, 2, multiline=True)
-        self.properties = self.create_label(5, 415, multiline=True)
+        self.effects = self.create_label(5, 415, multiline=True)
         
     def create_label(self, x, y, font_adjust=0, multiline=False):
         font_size = GameView.FONT_SIZE + font_adjust
@@ -303,15 +303,12 @@ class PlayerCard(Layer):
             self.attributes.text += "Wits        "+str(player.get(properties.wits))+"\n"
             self.attributes.text += "Perception  "+str(player.get(properties.perception))
             
-            self.properties.text = ''
-            for prop, value in player._properties.iteritems():
-                if (prop.type != properties.Property.TYPE_ATTR
-                    and prop != properties.max_hp
-                    and prop != properties.max_mana
-                    and prop != properties.hp
-                    and prop != properties.mana):
-                    spacing = " " * (15 - len(prop.name))
-                    self.properties.text += prop.name + spacing + str(value) + '\n'
+            self.effects.text = ''
+            for effect in player.effects:
+                name = effect.name
+                spacing = " " * (14 - len(name))
+                duration = effect.duration
+                self.effects.text += name + spacing + str(duration) + '\n'
 
 class Inventory(Layer, Hotspot):
     def __init__(self, x, y, width, height):
@@ -381,9 +378,9 @@ class Actions(Layer, Hotspot):
         if (components is None or 'actions' in components):
             player = State.model().player
             
-            for i in range(min(len(player._inventory), len(self.items))):
+            for i in range(min(len(player.actions), len(self.items))):
                 index = GameView.LOWER_BAR_LINE_QUANTITY - i - 1
-                #self.items[index].text = player._actions[i].properties['name']
+                self.items[index].text = player.actions[i].name
         
         if (components is None or 'cursor' in components):
             self.update_cursor();
@@ -409,6 +406,12 @@ class Actions(Layer, Hotspot):
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y, self.x+self.width, y)))
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y2, self.x+self.width, y2)))
             i += 1
+            
+    def on_click(self, model, x, y, button, modifiers):
+        player = State.model().player
+        index = GameView.LOWER_BAR_LINE_QUANTITY - y - 1
+        model.log_message("Execute "+player.actions[index].name)
+        model.do_update('log')
     
     # override
     def get_hover_type(self, x, y):
@@ -419,8 +422,8 @@ class Actions(Layer, Hotspot):
            
 class CommandBar(Layer, Hotspot):
     FONT = '<font face="'+GameView.FONT_NAME+'" size="'+str(GameView.COMMAND_BAR_FONT_SIZE)+'" color="white">'
-    BUTTONS = ["<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "E<u>X</u>PLORE MAP", "<u>W</u>AIT", "<u>R</u>EST"]
-    ACTIONS = ['view_properties', 'view_actions', 'view_traits', 'explore', 'wait', 'rest']
+    BUTTONS = ["<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "<u>L</u>OOK AROUND", "<u>W</u>AIT", "<u>R</u>EST"]
+    ACTIONS = ['view_properties', 'view_actions', 'view_traits', 'look', 'wait', 'rest']
     
     def __init__(self, x, y, width, height):
         Layer.__init__(self, x, y, width, height, [255.0, 0.0, 0.0])

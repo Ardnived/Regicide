@@ -71,8 +71,8 @@ commands = CommandSet({
         bindings = [KeyBinding(key.W)],
         action = functions.wait,
     ),
-    'explore': KeyBinder(
-        bindings = [KeyBinding(key.X)],
+    'look': KeyBinder(
+        bindings = [KeyBinding(key.L)],
         action = None,
     ),
     'view_properties': KeyBinder(

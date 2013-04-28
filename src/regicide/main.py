@@ -59,7 +59,7 @@ def init_states(window):
     )
     
     State.set_current('game')
-    game_model.execute_turn_queue()
+    game_model.next_turn()
 
 if __name__ == '__main__':
     init_states(window.MasterView())

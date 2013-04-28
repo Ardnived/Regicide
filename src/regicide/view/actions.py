@@ -36,16 +36,15 @@ class ActionsLayer(ListLayer):
         
         slots = self.rows * self.columns
         i = 0
-        for prop in player.properties:
+        for action in player.actions:
             if (i < slots):
                 x = i / self.rows
                 y = self.rows - (i - self.columns*x) - 1
                 
-                name = prop.name
-                value = str(player.get(prop))
-                spacing = " "*(20 - len(prop.name) + 3 - len(value))
+                name = action.name
+                #spacing = " "*(20 - len(action.name) + 3 - len(value))
                 
-                self.items[x][y].text = "Action"
+                self.items[x][y].text = name
                 i += 1
             else:
                 break;

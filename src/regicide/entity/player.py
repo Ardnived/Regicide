@@ -5,6 +5,8 @@ Created on Mar 23, 2013
 '''
 from regicide.entity.entity import Entity
 from regicide.data import traits, items
+from regicide.actions import voodoo
+from regicide.entity import effects
 
 class Player(Entity):
     TURN = False
@@ -23,10 +25,10 @@ class Player(Entity):
 
         self.add_trait(traits.DEMON_PACT.master())
         
-        aptitude = traits.SWORD_APTITUDE.master()
+        aptitude = traits.BLADE_APTITUDE.master()
         self.add_trait(aptitude)
         self.remove_trait(aptitude)
-        self.add_trait(traits.SWORD_APTITUDE.master())
+        self.add_trait(traits.BLADE_APTITUDE.master())
         
         armour = items.LEATHER_ARMOUR.master()
         self.add_item(armour)
@@ -35,4 +37,21 @@ class Player(Entity):
         sword = items.SWORD.master()
         self.add_item(sword)
         self.equip_item(sword)
+        
+        self.add_action(voodoo.AvianWisdom())
+        self.add_action(voodoo.Possess())
+        self.add_action(voodoo.Exorcism())
+        
+        self.add_effect(effects.Alert())
+        self.add_effect(effects.Ruin())
+        self.add_effect(effects.Wither())
+        self.add_effect(effects.Weakened())
     
+    def on_turn(self, game):
+        game.accept_input = True
+        
+        game.log_message("Awaiting user input...")
+        game.do_update('log')
+        
+        
+        
