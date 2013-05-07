@@ -17,22 +17,46 @@ class Hotspot(object):
         self.rows = rows
         self.columns = columns
         self.hover_type = hover_type
+        self.has_focus = False
+        self.mouse_x = 0
+        self.mouse_y = 0
+        
+    def on_focus_gained(self, model):
+        self.has_focus = True
+    
+    def on_focus_lost(self, model):
+        self.has_focus = False
+        model.do_update('cursor')
+        
+    def on_hover(self, model, mouse_x, mouse_y):
+        prev_select_x = self.selection_x
+        prev_select_y = self.selection_y
+        self.mouse_x = mouse_x
+        self.mouse_y = mouse_y
+        
+        if prev_select_x != self.selection_x or prev_select_y != self.selection_y or not self.has_focus:
+            self.on_select(model, self.selection_x, self.selection_y)
+        
+    def on_select(self, model, selection_x, selection_y):
+        model.do_update('cursor')
+        
+    @property
+    def selection_x(self):
+        return (self.mouse_x - self.x) / (self.width / self.columns)
+    
+    @property
+    def selection_y(self):
+        return (self.mouse_y - self.y) / (self.height / self.rows)
             
-    def on_click(self, model, row, column, button, modifiers):
+    def on_click(self, model, button, modifiers):
         pass
     
     def get_hover_type(self, x, y):
         return self.hover_type
     
-    def get_tile(self, x, y):
-        if (x < self.x or x >= self.x + self.width
-            or y < self.y or y >= self.y + self.height):
-            return None
-        else:
-            tile_width = self.width / self.columns
-            tile_height = self.height / self.rows
-            
-            tile_x = (x - self.x) / tile_width
-            tile_y = (y - self.y) / tile_height
-            return [tile_x, tile_y]
+    def contains(self, x, y):
+        return x > self.x and x < self.x + self.width and y > self.y and y < self.y + self.height
+    
+    def is_game_layer(self):
+        return False
     

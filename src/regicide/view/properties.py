@@ -46,10 +46,10 @@ class PropertiesLayer(ActiveListLayer):
         
         slots = self.rows * self.columns
         i = 0
-        for prop in player.properties:
+        for prop in properties.Property.all:
             if (i < slots):
                 x = i / self.rows
-                y = self.rows - (i - self.columns*x) - 1
+                y = self.rows - (i - self.rows*x) - 1
                 
                 name = prop.name
                 value = str(player.get(prop))
@@ -65,11 +65,8 @@ class PropertiesLayer(ActiveListLayer):
     def update_cursor(self):
         ActiveListLayer.update_cursor(self)
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            x = selection[0]
-            y = selection[1]
-            self.update_description(self.items[x][y])
+        if self.has_focus:
+            self.update_description(self.items[self.selection_x][self.selection_y])
         
     def update_description(self, tile):
         title = ""
@@ -77,7 +74,7 @@ class PropertiesLayer(ActiveListLayer):
         if (tile.text != ""):
             prop = tile.prop
             player = State.model().player
-            modifiers = player.modifiers
+            modifiers = player.get_property_modifiers(prop)
             title = prop.name+" "+str(player.get(prop))
             
             if (type(prop.base) == properties.Property):
@@ -92,13 +89,19 @@ class PropertiesLayer(ActiveListLayer):
                 spacing = " "*(2 - len(modifier))
                 text += "  "+spacing+modifier+"\n"
             
-            if (modifiers.has_key(prop)):
-                modifiers = modifiers[prop]
-                for source, modifier in modifiers.iteritems():
-                    value = str(modifier[1])
-                    spacing = " "*(2 - len(value))
-                    
-                    text += " "+modifier[0]+spacing+value+", "+source.properties['name']+"\n"
+            for modifier in modifiers:
+                value = modifier[0]
+                if value < 0:
+                    sign = "-"
+                    value = str(abs(value))
+                else:
+                    sign = "+"
+                    value = str(value)
+                
+                spacing = " "*(2 - len(value))
+                source = modifier[1]
+                
+                text += " "+sign+spacing+value+", "+source+"\n"
         
         self.title.text = title
         self.modifiers.text = text

@@ -50,7 +50,7 @@ class TraitsLayer(ActiveListLayer):
                 x = i / self.rows
                 y = self.rows - (i - self.columns*x) - 1
                 
-                self.items[x][y].text = trait.properties['name']
+                self.items[x][y].text = trait.name
                 self.items[x][y].trait = trait
                 i += 1
             else:
@@ -60,23 +60,20 @@ class TraitsLayer(ActiveListLayer):
     def update_cursor(self):
         ActiveListLayer.update_cursor(self)
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            x = selection[0]
-            y = selection[1]
-            self.update_description(self.items[x][y])
+        if self.has_focus:
+            self.update_description(self.items[self.selection_x][self.selection_y])
         
     def update_description(self, tile):
         title = ""
         text = ""
         if (tile.text != ""):
             trait = tile.trait
-            title += trait.properties['name']
-            text += TraitsLayer.DESC_FONT+trait.properties['description']+"</font>"
+            title += trait.name
+            text += TraitsLayer.DESC_FONT+trait.description+"</font>"
             text += "<br /><br />"
             
             text += TraitsLayer.MOD_FONT
-            for prop, modifier in trait.properties['modifiers'].iteritems():
+            for prop, modifier in trait.modifiers.iteritems():
                 text += "  "+modifier[0]+str(modifier[1])+" "+prop.name+"<br />"
             text += "</font>"
         

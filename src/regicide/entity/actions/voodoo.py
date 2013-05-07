@@ -4,29 +4,32 @@ Created on Apr 27, 2013
 @author: Devindra
 '''
 import abc
-from regicide.actions.action import Action
+from regicide.level import tile
 from regicide.entity import properties
 from regicide.entity.entity import Entity
+from regicide.entity.actions.action import Action
 
 class Possess(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Possess",
-            targets = [Action.TARGET_ENTITY],
+            targets = [tile.TARGET_ENTITY],
             description = "Take control of an enemy.",
-            tags = ['spell', 'voodoo']
+            tags = ['spell', 'voodoo'],
+            target_range = 3,
         )
         
-    def execute(self, game, source, target):
+    def execute(self, game, source, power, target):
+        target = target.entity
+        
         resistance = target.get(properties.spirit)
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
         if (strength > resistance):
-            source.dispath_event("on_action", self)
-            spirit = source.primary_spirit
-            source.remove_spirit(spirit)
-            target.add_spirit(spirit)
+            #spirit = source.primary_spirit
+            #source.remove_spirit(spirit)
+            #target.add_spirit(spirit)
             game.log_message("Your perspective shifts.")
         else:
             game.log_message(target.name+" resists.")
@@ -35,18 +38,20 @@ class Exorcism(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Exorcism",
-            targets = [Action.TARGET_ENTITY],
+            targets = [tile.TARGET_ENTITY],
             description = "Attempts to remove a chosen spirit from the target.",
             tags = ['spell', 'voodoo']
         )
         
-    def execute(self, game, source, target):
+    def execute(self, game, source, power, target):
+        target = target.entity
+        
         resistance = target.get(properties.spirit)
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
         if (strength > resistance):
-            source.dispath_event("on_action", self)
+            pass
             #spirit = source.primary_spirit
             #source.remove_spirit(spirit)
         else:
@@ -56,18 +61,19 @@ class Purge(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Purge",
-            targets = [Action.TARGET_ENTITY],
+            targets = [tile.TARGET_ENTITY],
             description = "Attempts to remove a chosen spirit from the target.",
             tags = ['spell', 'voodoo']
         )
         
-    def execute(self, game, source, target):
+    def execute(self, game, source, power, target):
+        target = target.entity
+        
         resistance = target.get(properties.spirit)
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
         if (strength > resistance):
-            source.dispath_event("on_action", self)
             source.remove_spirit(source.primary_spirit)
         else:
             game.log_message(target.name+" resists.")
@@ -76,10 +82,15 @@ class SummonSpirit(Action):
     __metaclass__ = abc.ABCMeta
     
     def __init__(self, name, description, blueprint):
-        Action.__init__(self, name, description, targets=[Action.TARGET_ENTITY, Action.TARGET_ITEM], tags=['spell', 'voodoo', 'spirit'])
+        Action.__init__(self, name, description, 
+            targets = [tile.TARGET_ENTITY, tile.TARGET_ITEM], 
+            tags = ['spell', 'voodoo', 'spirit']
+        )
         self.blueprint = blueprint
         
-    def execute(self, game, source, target):
+    def execute(self, game, source, power, target):
+        target = target.entity
+        
         if ( isinstance(target, Entity) ):
             resistance = target.get(properties.spirit)
         else:
@@ -89,7 +100,6 @@ class SummonSpirit(Action):
         game.log_message(source.name+" casts "+self.name+".") 
                
         if (strength > resistance):
-            source.dispath_event("on_action", self)
             spirit = self.blueprint.master()
             target.add_spirit(spirit)
             

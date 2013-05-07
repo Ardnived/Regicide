@@ -19,6 +19,7 @@ ITEM = Blueprint(
         'category': 'item',
     },
     properties = {
+        'type': "Misc",
         'skills': {
             'wield': properties.dexterity,
             'equip': properties.agility,
@@ -34,6 +35,7 @@ ARMOUR = Blueprint(
         'type': 'armour'
     },
     properties = {
+        'type': "Armour",
         'skills': {
             'wield': properties.agility,
             'equip': properties.agility,
@@ -47,7 +49,8 @@ LEATHER_ARMOUR = Blueprint(
         'type': 'axe'
     },
     properties = {
-        'name'   : "Leather Armour",
+        'name': "Leather Armour",
+        'description': "A piece of standard leather armour.",
         #'sprite' : visual.Misc.AXE_6,
         'equip_slot': equip.torso,
         'equip_size': 1,
@@ -64,7 +67,7 @@ WEAPON = Blueprint(
         'type': 'weapon'
     },
     properties = {
-        
+        'type': "Weapon",
     },
 )
 
@@ -75,6 +78,7 @@ AXE = Blueprint(
     },
     properties = {
         'name'   : "Axe",
+        'description': "A vicious looking axe.",
         #'sprite' : visual.Misc.AXE_6,
         'equip_slot': equip.hand,
         'equip_size': 3,
@@ -95,6 +99,7 @@ SWORD = Blueprint(
     },
     properties = {
         'name'   : "Sword",
+        'description': "An elegant bladed weapon.",
         #'sprite' : visual.Misc.SWORD_7,
         'equip_slot': equip.hand,
         'equip_size': 2,
@@ -115,6 +120,7 @@ POTION = Blueprint(
     },
     properties = {
         'name'   : "Main Potion",
+        'description': "An odd looking liquid.",
         'effect' : 'normal',
         'strength' : (pick, range(4, 6)),
         #'sprite' : visual.Misc.SWORD_7,

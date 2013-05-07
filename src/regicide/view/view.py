@@ -51,7 +51,7 @@ class Layer(object):
         pass
 
     def draw(self):
-        if (type(self.batches) is list):
+        if type(self.batches) is list:
             for batch in self.batches:
                 batch.draw();
         else:
@@ -83,6 +83,11 @@ class ListLayer(Layer):
     
     def update(self, components = None):
         Layer.update(self, components)
+    
+    def clear(self):
+        for column in self.items:
+            for item in column:
+                item.text = ""
 
 class ActiveListLayer(ListLayer, Hotspot):
     def __init__(self, x, y, width, height, font_name=View.FONT_NAME, font_size=View.FONT_SIZE, line_height=(View.FONT_SIZE*1.2), columns=1, column_width=None):
@@ -90,23 +95,22 @@ class ActiveListLayer(ListLayer, Hotspot):
         Hotspot.__init__(self, x, y, self.column_width*self.columns, self.line_height*self.rows, rows=self.rows, columns=self.columns)
     
     def update(self, components = None):
+        ListLayer.update(self, components)
         if (components is None or 'cursor' in components):
             self.update_cursor();
         
     def update_cursor(self):
         for column in self.items:
             for label in column:
-                    label.bold = False
+                label.bold = False
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            x = selection[0]
-            y = selection[1]
-            self.items[x][y].bold = True
+        if self.has_focus:
+            self.items[self.selection_x][self.selection_y].bold = True
     
     def draw(self):
         Layer.draw(self)
         
+        '''
         index_x = 0
         index_y = 0
         line_height = self.height / self.rows
@@ -122,6 +126,7 @@ class ActiveListLayer(ListLayer, Hotspot):
                 graphics.draw(2, gl.GL_LINES, ('v2i', (x, y2, x+self.column_width-5, y2)))
                 index_y += 1
             index_x += 1
+        '''
     
     # override
     def get_hover_type(self, x, y):

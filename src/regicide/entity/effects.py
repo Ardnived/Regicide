@@ -14,7 +14,7 @@ class Effect(object):
     STACK_DURATION = 2
     STACK_REFRESH = 3
     
-    def __init__(self, name, description, duration=100, intensity=1, stack_type=STACK_NONE, modifiers={}):
+    def __init__(self, name, description, duration=100, intensity=1, stack_type=STACK_NONE):
         '''
         Constructor
         '''
@@ -23,9 +23,6 @@ class Effect(object):
         self.duration = duration
         self.intensity = 1
         self.stack_type = stack_type
-        self.properties = {
-            'modifiers': modifiers,
-        }
         
     def stack(self, duration, intensity):
         if ( self.stack_type == Effect.STACK_INTENSITY ):
@@ -94,10 +91,11 @@ class Crippled(Effect):
             duration = duration, 
             intensity = intensity,
             stack_type = Effect.duration,
-            modifiers = {
-                properties.move: ['/', 2],
-            }
         )
+        
+    def modify_property(self, value, prop, entity):
+        if prop == properties.move:
+            return int(value / 2)
     
 class Weakened(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -107,10 +105,11 @@ class Weakened(Effect):
             duration = duration, 
             intensity = intensity,
             stack_type = Effect.STACK_INTENSITY,
-            modifiers = {
-                properties.damage: ['*', 0.7],
-            }
         )
+        
+    def modify_property(self, value, prop, entity):
+        if prop == properties.damage:
+            return int(value * 0.7)
     
 class Suppressed(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -147,10 +146,11 @@ class Vulnerable(Effect):
             duration = duration, 
             intensity = intensity,
             stack_type = Effect.STACK_INTENSITY,
-            modifiers = {
-                properties.defense: ['*', 0.7],
-            }
         )
+        
+    def modify_property(self, value, prop, entity):
+        if prop == properties.defense:
+            return int(value * 0.7)
     
 class Silenced(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -182,10 +182,9 @@ class Blind(Effect):
             stack_type = Effect.STACK_DURATION,
         )
     
-    def modify_property(self, value, entity):
+    def modify_property(self, value, prop, entity):
         if (prop == properties.vision):
-            value[0] = 1
-            return EVENT_HANDLED
+            return 1
     
 class Deaf(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -197,10 +196,9 @@ class Deaf(Effect):
             stack_type = Effect.STACK_DURATION,
         )
     
-    def modify_property(self, prop, value):
+    def modify_property(self, value, prop, entity):
         if (prop == properties.hearing):
-            value[0] = 0
-            return EVENT_HANDLED
+            return 0
     
 class Confusion(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -293,11 +291,13 @@ class Alert(Effect):
             duration = duration, 
             intensity = intensity,
             stack_type = Effect.STACK_REFRESH,
-            modifiers = {
-                properties.vision: ['*', 1.5],
-                properties.dark_vision: ['*', 1.5],
-            },
         )
+        
+    def modify_property(self, value, prop, entity):
+        if prop == properties.dark_vision:
+            return int(value * 1.5)
+        if prop == properties.vision:
+            return int(value * 1.5)
     
 class Invisible(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -356,9 +356,9 @@ class Frostbite(Effect):
             intensity = intensity,
         )
         
-    def modify_property(self, prop, value):
+    def modify_property(self, value, prop, entity):
         if (prop.type == properties.Property.TYPE_RESISTANCE):
-            value[0] /= 2
+            return value / 2
 
 class Ruin(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -369,10 +369,9 @@ class Ruin(Effect):
             intensity = intensity,
         )
         
-    def modify_property(self, prop, value):
+    def modify_property(self, value, prop, entity):
         if (prop == properties.regen_hp):
-            value[0] = 0
-            return EVENT_HANDLED
+            return 0
 
 class Wither(Effect):
     def __init__(self, duration=100, intensity=1):
@@ -383,7 +382,7 @@ class Wither(Effect):
             intensity = intensity,
         )
         
-    def modify_property(self, prop, value):
+    def modify_property(self, value, prop, entity):
         if (prop == properties.regen_fp):
-            value[0] /= 2
+            return value / 2
         

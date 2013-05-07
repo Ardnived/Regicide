@@ -42,12 +42,21 @@ class State(object):
             return None
     
     @staticmethod
+    def window():
+        if (State.exists()):
+            return State._current.window
+        else:
+            return None
+    
+    @staticmethod
     def set_current(slug):
         state = State._all[slug]
         State._current = state
         state.model.do_update('all')
 
     def __init__(self, slug, window, model, view, controller, commands):
+        print("Initializing State: "+slug)
+        self.window = window
         self.model = model
         self.view = view
         self.controller = controller

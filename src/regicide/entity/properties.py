@@ -13,10 +13,13 @@ class Property(object):
     TYPE_PROPERTY = 3 # an arbitrary property.
     TYPE_RESISTANCE = 4 # resistance to various special attacks
     
+    all = []
+    
     def __init__(self, name, base, property_type):
         self.name = name
         self.base = base
         self.type = property_type
+        Property.all.append(self)
 
 # Attributes
 dexterity = Property('Dexterity', 0, Property.TYPE_ATTR)
@@ -42,10 +45,12 @@ dark_vision = Property('Shadow Perception', perception, Property.TYPE_ATTR_SUB)
 resist_frost = Property('Frost Resistance', 0, Property.TYPE_RESISTANCE)
 resist_fire = Property('Fire Resistance', 0, Property.TYPE_RESISTANCE)
 resist_spirit = Property('Spirit Resistance', 0, Property.TYPE_RESISTANCE)
-resist_crit = Property('Critical Strike Resistance', 0, Property.TYPE_RESISTANCE)
+resist_crit = Property('Critical Resistance', 0, Property.TYPE_RESISTANCE)
 
 # Item Statistics
-damage = Property('Damage', 0, Property.TYPE_ATTR_SUB)
+damage = Property('Base Damage', 0, Property.TYPE_ATTR_SUB)
+damage_dice = Property('Damage Dice', 1, Property.TYPE_ATTR_SUB)
+damage_sides = Property('Damage Sides', 6, Property.TYPE_ATTR_SUB)
 defense = Property('Defense', 0, Property.TYPE_ATTR_SUB)
 
 # Skills

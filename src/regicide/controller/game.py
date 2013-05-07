@@ -12,7 +12,7 @@ from regicide.controller import functions
 commands = CommandSet({
     'north': KeyBinder(
         bindings = [
-            KeyBinding(key.MOTION_UP, KeyBinding.TYPE_MOTION),
+            KeyBinding(key.MOTION_UP, KeyBinding.TYPE_KEY),
             KeyBinding(key.NUM_8, KeyBinding.TYPE_REPEAT),
         ],
         action = partial(functions.move, y=1),
@@ -62,6 +62,11 @@ commands = CommandSet({
         ],
         action = partial(functions.move, x=1),
     ),
+                       
+    'cancel': KeyBinder(
+        bindings = [KeyBinding(key.ESCAPE)],
+        action = functions.cancel,
+    ),
     
     'rest': KeyBinder(
         bindings = [KeyBinding(key.R)],
@@ -73,7 +78,7 @@ commands = CommandSet({
     ),
     'look': KeyBinder(
         bindings = [KeyBinding(key.L)],
-        action = None,
+        action = functions.look,
     ),
     'view_properties': KeyBinder(
         bindings = [KeyBinding(key.P)],
@@ -97,16 +102,15 @@ class GameHotspot(Hotspot):
     
     def __init__(self, x, y, width, height, rows=1, columns=1, hover_type=Hotspot.HOVER_HIDDEN):
         Hotspot.__init__(self, x, y, width, height, rows, columns, hover_type)
-            
-    def on_click(self, model, row, column, button, modifiers):
-        if (model.selection[0] != model.player.x or model.selection[1] != model.player.y):
-            
+        
+    def on_click(self, model, button, modifiers):
+        if (self.selection_x != model.player.x or self.selection_y != model.player.y):
             player_x = model.player.x
             player_y = model.player.y
             grid_x = player_x - self.grid_width/2
             grid_y = player_y - self.grid_height/2
-            click_x = model.selection[0] + grid_x
-            click_y = model.selection[1] + grid_y
+            click_x = self.selection_x + grid_x
+            click_y = self.selection_y + grid_y
             
             room = model.map.room_grid[click_x][click_y]
             if (room is not None):

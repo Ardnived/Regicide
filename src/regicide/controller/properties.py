@@ -12,6 +12,7 @@ commands = CommandSet({
     'exit': KeyBinder(
         bindings = [
             KeyBinding(key.ENTER),
+            KeyBinding(key.ESCAPE),
         ],
         action = partial(functions.set_state, state='game'),
     ),

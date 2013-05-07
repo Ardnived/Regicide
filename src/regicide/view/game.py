@@ -3,16 +3,19 @@ Created on Apr 6, 2013
 
 @author: Devindra
 '''
-from regicide.view.view import View, Layer
+from regicide.view.view import View, Layer, ActiveListLayer
 from pyglet import graphics
 from pyglet import text
 from pyglet import sprite
 from pyglet import gl
+from pyglet.window import mouse
 from regicide.resources import visual
 from regicide.entity import properties
 from regicide.controller.hotspot import Hotspot
 from regicide.controller.game import GameHotspot
+from regicide.controller import functions
 from regicide.controller import commands
+from regicide.entity.actions import action
 from regicide.mvc import State
 
 class GameView(View):
@@ -32,14 +35,19 @@ class GameView(View):
     INFO_GUTTER_Y = 10
     INFO_FONT_SIZE = 14
     INFO_WIDTH = 150
+    INFO_HEIGHT = 390
     
     LOG_LINE_HEIGHT = 15
     LOG_FONT_SIZE = FONT_SIZE
     LOG_LINE_QUANTITY = (LOWER_BAR_HEIGHT - LOWER_BAR_GUTTER_Y*2) / LOG_LINE_HEIGHT
+    LOG_HTML_FONT_SIZE = 2
     
     LOWER_BAR_LINE_HEIGHT = 15
     LOWER_BAR_FONT_SIZE = 11
     LOWER_BAR_LINE_QUANTITY = (LOWER_BAR_HEIGHT - LOWER_BAR_GUTTER_Y*2) / LOWER_BAR_LINE_HEIGHT
+    
+    EFFECTS_LINE_HEIGHT = 15
+    EFFECTS_FONT_SIZE = 10
     
     def __init__(self, window, ascii=True):
         View.__init__(self, window)
@@ -64,11 +72,19 @@ class GameView(View):
         
         # Create the info window
         info_x = window.width - (GameView.INFO_WIDTH + GameView.INFO_GUTTER_X*2)
-        info_y = GameView.LOWER_BAR_HEIGHT
+        info_y = window.height - (GameView.INFO_HEIGHT + GameView.INFO_GUTTER_Y)
         info_width = GameView.INFO_WIDTH
-        info_height = window.height - GameView.LOWER_BAR_HEIGHT - GameView.INFO_GUTTER_Y
+        info_height = GameView.INFO_HEIGHT
         info_layer = PlayerCard(info_x, info_y, info_width, info_height)
         self.layers.append(info_layer)
+        
+        # Create the effects list
+        effects_x = window.width - (GameView.INFO_WIDTH + GameView.INFO_GUTTER_X*2)
+        effects_y = GameView.LOWER_BAR_HEIGHT
+        effects_width = GameView.INFO_WIDTH
+        effects_height = window.height - GameView.LOWER_BAR_HEIGHT - GameView.INFO_GUTTER_Y*2 - info_height
+        effects_layer = Effects(effects_x, effects_y, effects_width, effects_height)
+        self.layers.append(effects_layer)
     
         # Create the command bar
         cmd_x = GameView.COMMAND_BAR_GUTTER_X
@@ -83,7 +99,7 @@ class GameView(View):
         game_y = GameView.LOWER_BAR_HEIGHT + cmd_height
         game_width = info_x - GameView.INFO_GUTTER_X
         game_height = window.height - log_height - cmd_height
-        if (ascii is True):
+        if ascii is True:
             game_layer = AsciiGame(game_x, game_y, game_width, game_height)
         else:
             game_layer = TileGame(game_x, game_y, game_width, game_height)
@@ -99,41 +115,40 @@ class GameLayer(Layer, GameHotspot):
         self.tile_height = tile_height
         self.grid_width = self.width / self.tile_width
         self.grid_height = self.height / self.tile_height
+
+        self.cursor.scale = float(self.tile_width / 32.0)
         
         GameHotspot.__init__(self, x, y, width, height, self.grid_height, self.grid_width, hover_type=Hotspot.HOVER_HIDDEN)
        
     def draw(self):
         Layer.draw(self);
-        if (self.show_cursor):
-            self.cursor.draw();
+        if self.show_cursor:
+            self.cursor.draw()
     
     def update(self, components = None):
-        if (components is None or 'cursor' in components):
+        if components is None or 'cursor' in components:
             self.update_cursor();
         
     def update_cursor(self):
         model = State.model()
-        selection = model.selection
         
-        if (selection is not None and selection[2] == self):
-            grid_width = self.width / self.tile_width
-            grid_height = self.height / self.tile_height
-            grid_x = model.player.x - grid_width/2
-            grid_y = model.player.y - grid_height/2
-            x = selection[0]
-            y = selection[1]
-            tile = model.map.get_tile(x + grid_x, y + grid_y)
+        if self.has_focus:
+            self.update_game_bounds()
             
-            if (tile is not None):
-                if (tile.entity is not None):
-                    self.cursor.image = visual.Cursor.get(visual.Cursor.YELLOW)
-                else:
-                    if (tile.is_passable()):
-                        self.cursor.image = visual.Cursor.get(visual.Cursor.SELECT)
-                    else:
-                        self.cursor.image = visual.Cursor.get(visual.Cursor.TARGET)
+            if model.state == model.STATE_EXPLORE:
+                x = self.columns / 2
+                y = self.rows / 2
             else:
+                x = self.selection_x
+                y = self.selection_y
+            
+            valid = model.is_valid_target(x + self.grid_x, y + self.grid_y)
+            if valid is None:
                 self.cursor.image = visual.Cursor.get(visual.Cursor.TARGET)
+            elif valid:
+                self.cursor.image = visual.Cursor.get(visual.Cursor.YELLOW)
+            else:
+                self.cursor.image = visual.Cursor.get(visual.Cursor.SELECT)
             
             self.cursor.x = x * self.tile_width + self.x
             self.cursor.y = y * self.tile_height + self.y
@@ -142,8 +157,12 @@ class GameLayer(Layer, GameHotspot):
             self.show_cursor = False
             
     def update_game_bounds(self):
-        self.grid_x = State.model().player.x - self.grid_width/2
-        self.grid_y = State.model().player.y - self.grid_height/2
+        center = State.model().get_center()
+        self.grid_x = center[0] - self.grid_width/2
+        self.grid_y = center[1] - self.grid_height/2
+                    
+    def is_game_layer(self):
+        return True
 
 class TileGame(GameLayer):
     def __init__(self, x, y, width, height):
@@ -152,19 +171,20 @@ class TileGame(GameLayer):
     def update(self, components = None):
         GameLayer.update(self, components)
         
-        if (components is None or 'tiles' in components):
+        if components is None or 'tiles' in components:
             self.update_game_bounds()
             self.update_tiles();
             
-        if (components is None or 'entities' in components):
+        if components is None or 'entities' in components:
             self.update_entities();
 
-        if (components is None or 'shadows' in components):
+        if components is None or 'shadows' in components:
             self.update_shadows();
         
     def update_tiles(self):
-        if (hasattr(self, 'tile_layer')):
+        if hasattr(self, 'tile_layer'):
             self.batches.remove(self.tile_layer)
+        
         self.tile_layer = graphics.Batch()
         self.batches.append(self.tile_layer)
         model = State.model()
@@ -173,14 +193,25 @@ class TileGame(GameLayer):
         for x in range(max(0, self.grid_x), min(self.grid_x + self.grid_width, len(grid))):
             for y in range(max(0, self.grid_y), min(self.grid_y + self.grid_height, len(grid[x]))):
                 tile = grid[x][y]
-                if (tile is not None):
+                if tile is not None:
                     sprite = tile.sprite
                     sprite.batch = self.tile_layer
                     sprite.x = x*self.tile_width - self.grid_x*self.tile_width + self.x
                     sprite.y = y*self.tile_height - self.grid_y*self.tile_width + self.y
+                    
+                    if model.targeting_action is not None:
+                        valid = model.is_valid_target(x, y)
+                        if valid is None:
+                            sprite.opacity = 64
+                        elif valid is False:
+                            sprite.opacity = 200
+                        else:
+                            sprite.opacity = 255
+                    else:
+                        sprite.opacity = 255
         
     def update_entities(self):
-        if (hasattr(self, 'entity_layer')):
+        if hasattr(self, 'entity_layer'):
             self.batches.remove(self.entity_layer)
         self.entity_layer = graphics.Batch()
         self.batches.append(self.entity_layer)
@@ -198,7 +229,7 @@ class TileGame(GameLayer):
                     sprite.y = y*self.tile_height - self.grid_y*self.tile_height + self.y
         
     def update_shadows(self):
-        if (hasattr(self, 'shadow_layer')):
+        if hasattr(self, 'shadow_layer'):
             self.batches.remove(self.shadow_layer)
         self.shadow_layer = graphics.Batch()
         self.batches.append(self.shadow_layer)
@@ -220,7 +251,6 @@ class AsciiGame(GameLayer):
     
     def __init__(self, x, y, width, height):
         GameLayer.__init__(self, x, y, width, height, self.TILE_SIZE, self.TILE_SIZE, [0.0, 0.0, 255.0])
-        self.cursor.scale = float(self.TILE_SIZE / 32.0)
         
     def update(self, components = None):
         GameLayer.update(self, components)
@@ -237,8 +267,8 @@ class AsciiGame(GameLayer):
         for x in range(max(0, self.grid_x), min(self.grid_x + self.grid_width, len(grid))):
             for y in range(max(0, self.grid_y), min(self.grid_y + self.grid_height, len(grid[x]))):
                 tile = grid[x][y]
-                if (tile is not None):
-                    if (tile.entity is None):
+                if tile is not None:
+                    if tile.entity is None:
                         sprite = tile.ascii
                     else:
                         sprite = tile.entity.ascii
@@ -247,9 +277,22 @@ class AsciiGame(GameLayer):
                     sprite.batch = self.batches
                     sprite.x = self.x + (x*self.tile_width - self.grid_x*self.tile_width)
                     sprite.y = self.y + (y*self.tile_height - self.grid_y*self.tile_height)
-
+                    
+                    if model.state == model.STATE_TARGET:
+                        valid = model.is_valid_target(x, y)
+                        if valid is None:
+                            sprite.opacity = 64
+                        elif valid is False:
+                            sprite.opacity = 160
+                        else:
+                            sprite.opacity = 255
+                    else:
+                        sprite.opacity = 255
+                    
 
 class Log(Layer):
+    HTML_FONT = '<font face="'+GameView.FONT_NAME+'" size="'+str(GameView.LOG_HTML_FONT_SIZE)+'" color="white">'
+    
     def __init__(self, x, y, width, height):
         Layer.__init__(self, x, y, width, height, [0.0, 255.0, 255.0])
         
@@ -260,12 +303,22 @@ class Log(Layer):
         for i in range(GameView.LOG_LINE_QUANTITY):
             self.log.append(text.Label(font_name=GameView.FONT_NAME, font_size=GameView.LOG_FONT_SIZE, x=x, y=y+i*GameView.LOG_LINE_HEIGHT, batch=self.batches))
         
+        self.info = text.HTMLLabel(x=x, y=height, width=width, height=height, multiline=True, batch=self.batches)
+        
     def update(self, components = None):
         model = State.model()
         
-        if (components is None or 'log' in components):
-            for i in range(min(len(model.log), len(self.log))):
-                self.log[i].text = model.log[i+model.log_offset]
+        if components is None or 'log' in components:
+            if model.info:
+                for i in range(min(len(model.log), len(self.log))):
+                    self.log[i].text = ""
+                    
+                self.info.text = Log.HTML_FONT + model.info + "</font>"
+            else:
+                for i in range(min(len(model.log), len(self.log))):
+                    self.log[i].text = model.log[i+model.log_offset]
+                
+                self.info.text = ""
 
 
 class PlayerCard(Layer):
@@ -273,7 +326,7 @@ class PlayerCard(Layer):
         Layer.__init__(self, x, y, width, height, [0.0, 255.0, 0.0])
         
         self.batches = graphics.Batch()
-        self.portrait = sprite.Sprite(visual.Character.HELENA, x+5, y+height-250, batch=self.batches)
+        self.portrait = sprite.Sprite(visual.Character.HELENA, x+0, y+height-240, batch=self.batches)
         self.portrait.scale = 0.8
         
         self.name = self.create_label(5, 250, 4)
@@ -282,6 +335,7 @@ class PlayerCard(Layer):
         self.mana = self.create_label(5, 285, 4)
         self.mana.color = (135, 206, 235, 255)
         self.attributes = self.create_label(5, 310, 2, multiline=True)
+        
         self.effects = self.create_label(5, 415, multiline=True)
         
     def create_label(self, x, y, font_adjust=0, multiline=False):
@@ -303,12 +357,79 @@ class PlayerCard(Layer):
             self.attributes.text += "Wits        "+str(player.get(properties.wits))+"\n"
             self.attributes.text += "Perception  "+str(player.get(properties.perception))
             
+            '''
             self.effects.text = ''
             for effect in player.effects:
                 name = effect.name
-                spacing = " " * (14 - len(name))
+                spacing = " " * (12 - len(name))
                 duration = effect.duration
                 self.effects.text += name + spacing + str(duration) + '\n'
+            '''
+
+class Effects(Layer, Hotspot):
+    def __init__(self, x, y, width, height):
+        Layer.__init__(self, x, y, width, height, [255.0, 0.0, 255.0])
+        
+        self.batches = graphics.Batch()
+        self.items = []
+        
+        self.line_quantity = height / GameView.EFFECTS_LINE_HEIGHT
+        for i in range(self.line_quantity):
+            self.items.append(text.Label(font_name=GameView.FONT_NAME, font_size=GameView.EFFECTS_FONT_SIZE, x=x, y=y+i*GameView.EFFECTS_LINE_HEIGHT, batch=self.batches))
+        
+        Hotspot.__init__(self, x, y, width, height, rows=self.line_quantity)
+    
+    def draw(self):
+        Layer.draw(self)
+        
+        '''
+        i = 0
+        height = self.height/len(self.items)
+        for _ in self.items:
+            y = self.y + i*height
+            y2 = self.y + i*height + height
+            gl.glColor3f(*self.color)
+            graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y, self.x+self.width, y)))
+            graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y2, self.x+self.width, y2)))
+            i += 1
+        '''
+        
+    def update(self, components = None):
+        if components is None or 'effects' in components:
+            player = State.model().player
+            
+            for i in range(min(len(player.effects), len(self.items))):
+                effect = player.effects[i]
+                index = self.line_quantity - i - 1
+                
+                name = effect.name
+                spacing = " " * (12 - len(name))
+                duration = effect.duration
+                self.items[index].text = name + spacing + str(duration)
+                self.items[index].effect = effect
+        
+        if components is None or 'cursor' in components:
+            self.update_cursor();
+        
+    def update_cursor(self):
+        for label in self.items:
+                label.bold = False
+        
+        if self.has_focus:
+            self.items[self.selection_y].bold = True
+        
+    def on_select(self, model, x, y):
+        Hotspot.on_select(self, model, x, y)
+        
+        item = self.items[self.selection_y]
+        if item.text != "":
+            model.display_info(item.effect.name+"<br /><br />"+item.effect.description)
+        else:
+            model.display_info(None)
+        
+    def on_focus_lost(self, model):
+        Hotspot.on_focus_lost(self, model)
+        model.display_info(None)
 
 class Inventory(Layer, Hotspot):
     def __init__(self, x, y, width, height):
@@ -323,28 +444,38 @@ class Inventory(Layer, Hotspot):
         Hotspot.__init__(self, x, y, width, height, rows=GameView.LOWER_BAR_LINE_QUANTITY)
         
     def update(self, components = None):
-        if (components is None or 'inventory' in components):
+        if components is None or 'inventory' in components:
             player = State.model().player
             
             for i in range(min(len(player._inventory), len(self.items))):
                 index = GameView.LOWER_BAR_LINE_QUANTITY - i - 1
-                self.items[index].text = player._inventory[i].properties['name']
+                item = player.inventory[i]
+                
+                text = ""
+                print(player.equipment[item.equip_slot])
+                if item in player.equipment[item.equip_slot]:
+                    text += "e "
+                else:
+                    text += "  "
+                
+                text += item.name
+                self.items[index].text = text
+                self.items[index].item = item
         
-        if (components is None or 'cursor' in components):
+        if components is None or 'cursor' in components:
             self.update_cursor();
         
     def update_cursor(self):
         for label in self.items:
-                label.bold = False
+            label.bold = False
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            y = selection[1]
-            self.items[y].bold = True
+        if self.has_focus:
+            self.items[self.selection_y].bold = True
     
     def draw(self):
         Layer.draw(self)
         
+        '''
         i = 0
         height = self.height/len(self.items)
         for label in self.items:
@@ -354,10 +485,32 @@ class Inventory(Layer, Hotspot):
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y, self.x+self.width, y)))
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y2, self.x+self.width, y2)))
             i += 1
+        '''
+        
+    def on_select(self, model, selection_x, selection_y):
+        Hotspot.on_select(self, model, selection_x, selection_y)
+        
+        item = self.items[selection_y]
+        if item.text != "":
+            model.display_info(item.item.name+"<br /><br />"+item.item.description)
+        else:
+            model.display_info(None)
+        
+    def on_focus_lost(self, model):
+        Hotspot.on_focus_lost(self, model)
+        model.display_info(None)
+            
+    def on_click(self, model, button, modifiers):
+        if button == mouse.LEFT:
+            functions.toggle_equip(model, self.items[self.selection_y].item)
+            model.display_info(None)
+        elif button == mouse.RIGHT:
+            functions.set_state(model, 'inventory')
+            #TODO: make it so that you are now selecting the appropriate tile.
     
     # override
     def get_hover_type(self, x, y):
-        if (self.items[y].text != ""):
+        if self.items[y].text != "":
             return Hotspot.HOVER_CLICK
         else:
             return Hotspot.HOVER_DEFAULT
@@ -379,8 +532,11 @@ class Actions(Layer, Hotspot):
             player = State.model().player
             
             for i in range(min(len(player.actions), len(self.items))):
+                action = player.actions[i]
+                
                 index = GameView.LOWER_BAR_LINE_QUANTITY - i - 1
-                self.items[index].text = player.actions[i].name
+                self.items[index].text = action.name
+                self.items[index].action = action
         
         if (components is None or 'cursor' in components):
             self.update_cursor();
@@ -389,14 +545,13 @@ class Actions(Layer, Hotspot):
         for label in self.items:
                 label.bold = False
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            y = selection[1]
-            self.items[y].bold = True
+        if self.has_focus:
+            self.items[self.selection_y].bold = True
     
     def draw(self):
         Layer.draw(self)
         
+        '''
         i = 0
         height = self.height/len(self.items)
         for label in self.items:
@@ -406,16 +561,36 @@ class Actions(Layer, Hotspot):
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y, self.x+self.width, y)))
             graphics.draw(2, gl.GL_LINES, ('v2i', (self.x, y2, self.x+self.width, y2)))
             i += 1
+        '''
+        
+    def on_select(self, model, selection_x, selection_y):
+        Hotspot.on_select(self, model, selection_x, selection_y)
+        
+        item = self.items[selection_y]
+        if item.text != "":
+            model.display_info(item.action.name+"<br /><br />"+item.action.description)
+        else:
+            model.display_info(None)
+        
+    def on_focus_lost(self, model):
+        Hotspot.on_focus_lost(self, model)
+        model.display_info(None)
             
-    def on_click(self, model, x, y, button, modifiers):
-        player = State.model().player
-        index = GameView.LOWER_BAR_LINE_QUANTITY - y - 1
-        model.log_message("Execute "+player.actions[index].name)
-        model.do_update('log')
+    def on_click(self, model, button, modifiers):
+        if button == mouse.LEFT:
+            player = State.model().player
+            index = GameView.LOWER_BAR_LINE_QUANTITY - self.selection_y - 1
+            model.execute_action(action.ActionInstance(
+                action = player.actions[index],
+                source = model.player,
+            ))
+        elif button == mouse.RIGHT:
+            functions.set_state(model, 'actions')
+            #TODO: make it so that you are now selecting the appropriate tile.
     
     # override
     def get_hover_type(self, x, y):
-        if (self.items[y].text != ""):
+        if self.items[y].text != "":
             return Hotspot.HOVER_CLICK
         else:
             return Hotspot.HOVER_DEFAULT
@@ -458,14 +633,13 @@ class CommandBar(Layer, Hotspot):
         for label in self.commands:
                 label.bold = False
         
-        selection = State.model().selection
-        if (selection is not None and selection[2] == self):
-            x = selection[0]
-            self.commands[x].bold = True
+        if self.has_focus:
+            self.commands[self.selection_x].bold = True
 
     def draw(self):
         Layer.draw(self)
         
+        '''
         i = 0
         width = self.width/len(self.commands)
         for label in self.commands:
@@ -475,8 +649,9 @@ class CommandBar(Layer, Hotspot):
             graphics.draw(2, gl.GL_LINES, ('v2i', (x, self.y, x, self.y+self.height)))
             graphics.draw(2, gl.GL_LINES, ('v2i', (x2, self.y, x2, self.y+self.height)))
             i += 1
+        '''
             
-    def on_click(self, model, x, y, button, modifiers):
-        action = State.commands().get(CommandBar.ACTIONS[x]).action
+    def on_click(self, model, button, modifiers):
+        action = State.commands().get(CommandBar.ACTIONS[self.selection_x]).action
         if (action is not None):
             action(model)

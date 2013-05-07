@@ -3,14 +3,20 @@ Created on Apr 9, 2013
 
 @author: Devindra
 '''
-from regicide.view.view import View, ListLayer, ActiveListLayer
+from pyglet import text
+from regicide.entity.actions import action
+from regicide.controller.hotspot import Hotspot
+from regicide.view.view import View, ActiveListLayer
 from regicide.mvc import State
+from regicide.controller import functions
 
 class ActionsView(View):
     FONT_NAME = View.FONT_NAME
     FONT_SIZE = 13
     FONT_RATIO = View.FONT_RATIO
     
+    DESCRIPTION_FONT_SIZE = FONT_SIZE - 2
+
     LINE_HEIGHT = 18
     GUTTER = 10
 
@@ -24,13 +30,15 @@ class ActionsView(View):
         layer = ActionsLayer(x, y, width, height)
         self.layers.append(layer)
 
-class ActionsLayer(ListLayer):
+class ActionsLayer(ActiveListLayer):
     
     def __init__(self, x, y, width, height):
-        ListLayer.__init__(self, x, y, width, height, ActionsView.FONT_NAME, ActionsView.FONT_SIZE, ActionsView.LINE_HEIGHT, columns=3, column_width=250)
+        ActiveListLayer.__init__(self, x, y, width, height, ActionsView.FONT_NAME, ActionsView.FONT_SIZE, ActionsView.LINE_HEIGHT, columns=3, column_width=250)
+        self.title = text.Label(font_name=ActionsView.FONT_NAME, font_size=ActionsView.FONT_SIZE, x=800, y=height-50, batch=self.batches)
+        self.description = text.Label(font_name=ActionsView.FONT_NAME, font_size=ActionsView.DESCRIPTION_FONT_SIZE, x=820, y=height-70, width=300, multiline=True, batch=self.batches)
         
     def update(self, components = None):
-        ListLayer.update(self, components)
+        ActiveListLayer.update(self, components)
         
         player = State.model().player
         
@@ -41,12 +49,41 @@ class ActionsLayer(ListLayer):
                 x = i / self.rows
                 y = self.rows - (i - self.columns*x) - 1
                 
-                name = action.name
-                #spacing = " "*(20 - len(action.name) + 3 - len(value))
-                
-                self.items[x][y].text = name
+                self.items[x][y].text = action.name
+                self.items[x][y].action = action
                 i += 1
             else:
                 break;
+        
+    # override
+    def update_cursor(self):
+        ActiveListLayer.update_cursor(self)
+        
+        if self.has_focus:
+            self.update_description(self.items[self.selection_x][self.selection_y])
+        
+    def update_description(self, tile):
+        title = ""
+        text = ""
+        if (tile.text != ""):
+            action = tile.action
+            title = action.name
+            text = action.description
+        
+        self.title.text = title
+        self.description.text = text
+            
+    def on_click(self, model, button, modifiers):
+        player = State.model().player
+        index = self.rows - self.selection_y - 1
+        functions.set_state(model, 'game')
+        State.model().execute_action(action.ActionInstance(
+            action = player.actions[index],
+            source = model.player,
+        ))
+        
+    # override
+    def get_hover_type(self, x, y):
+        return Hotspot.HOVER_DEFAULT
         
         

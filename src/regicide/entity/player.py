@@ -5,8 +5,10 @@ Created on Mar 23, 2013
 '''
 from regicide.entity.entity import Entity
 from regicide.data import traits, items
-from regicide.actions import voodoo
+from regicide.entity.traits import Trait
+from regicide.entity.actions import voodoo
 from regicide.entity import effects
+from regicide.entity.items import Item
 
 class Player(Entity):
     TURN = False
@@ -23,35 +25,55 @@ class Player(Entity):
         
         # TODO: remove the following test code
 
-        self.add_trait(traits.DEMON_PACT.master())
+        self.add_trait(Trait(traits.DEMON_PACT.master()))
         
-        aptitude = traits.BLADE_APTITUDE.master()
+        aptitude = Trait(traits.BLADE_APTITUDE.master())
         self.add_trait(aptitude)
         self.remove_trait(aptitude)
-        self.add_trait(traits.BLADE_APTITUDE.master())
+        self.add_trait(Trait(traits.BLADE_APTITUDE.master()))
         
-        armour = items.LEATHER_ARMOUR.master()
+        armour = Item(items.LEATHER_ARMOUR.master())
         self.add_item(armour)
         self.equip_item(armour)
         
-        sword = items.SWORD.master()
+        armour = Item(items.LEATHER_ARMOUR.master())
+        self.add_item(armour)
+        
+        sword = Item(items.SWORD.master())
         self.add_item(sword)
         self.equip_item(sword)
+        
+        sword = Item(items.AXE.master())
+        self.add_item(sword)
+        
+        sword = Item(items.POTION.master())
+        self.add_item(sword)
         
         self.add_action(voodoo.AvianWisdom())
         self.add_action(voodoo.Possess())
         self.add_action(voodoo.Exorcism())
         
-        self.add_effect(effects.Alert())
-        self.add_effect(effects.Ruin())
-        self.add_effect(effects.Wither())
-        self.add_effect(effects.Weakened())
+        self.add_effect(effects.Alert(12500))
+        self.add_effect(effects.Ruin(4240))
+        self.add_effect(effects.Wither(16310))
+        self.add_effect(effects.Weakened(13520))
+
+        self.recalculate_properties()
     
     def on_turn(self, game):
         game.accept_input = True
         
         game.log_message("Awaiting user input...")
         game.do_update('log')
+    
+    def on_death(self, game):
+        game.map.get_tile(self.x, self.y).entity = None
+        game.log_message("You die.")
+        game.log_message("GAME OVER")
+        game.do_update('log')
+    
+    def is_player(self):
+        return True
         
         
         

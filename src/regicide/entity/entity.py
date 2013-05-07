@@ -7,7 +7,6 @@ An entity in the game. Currently this indicates any Player or NPC.
 Entities get turns to act.
 '''
 import abc
-import types
 from random import randint
 from pyglet import sprite
 from regicide.model import event
@@ -28,6 +27,7 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         self.name = template.properties['name']
         self.sprite = sprite.Sprite(visual.Entity.get(template.properties['sprite']))
         self.ascii = sprite.Sprite(visual.ASCII.get(template.properties['ascii']))
+        self.dead = False
         
         self._equipment = {}
         self._inventory = []
@@ -53,6 +53,25 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         
         self.recalculate_properties()
         
+    def on_turn_start(self, game, entity, time_passed):
+        if self.dead:
+            self.on_death(game)
+            return event.EVENT_CANCELED
+        
+        if self.effects:
+            for effect in self.effects:
+                effect.duration -= time_passed
+                if effect.duration <= 0:
+                    self.effects.remove(effect)
+            
+            game.do_update('playercard')   
+    
+    def on_death(self, game):
+        game.map.get_tile(self.x, self.y).entity = None
+        game.log_message(self.name+" dies.")
+        game.do_update('log')
+        game.end_turn() 
+        
     # ==================================
         
     def get(self, prop, base=False):
@@ -60,16 +79,16 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Gets the stored value of one of this entity's properties. 
         Use recalculate_properties(properties) to refresh the data.
         '''
-        if (base):
-            if (self._base_properties.has_key(prop)):
+        if base:
+            if self._base_properties.has_key(prop):
                 return self._base_properties[prop]
             else:
-                if (type(prop.base) == properties.Property):
+                if type(prop.base) == properties.Property:
                     return self.get(prop.base)
                 else:
                     return prop.base
         else:
-            if (self._properties.has_key(prop)):
+            if self._properties.has_key(prop):
                 return self._properties[prop]
             else:
                 return self.get(prop, True)
@@ -79,10 +98,10 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Sets the base value for one of this entity's properties. 
         '''
         self._base_properties[prop] = value
+        self.recalculate_properties([prop])
         
-        if (value <= 0 and (prop.type == properties.Property.TYPE_ATTR or prop == properties.hp)):
-            #self.die()
-            pass
+        if value <= 0 and (prop.type == properties.Property.TYPE_ATTR or prop == properties.hp):
+            self.dead = True
     
     @property
     def properties(self):
@@ -148,7 +167,6 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         defined in regicide.data.traits
         '''
         self._traits.append(trait)
-        self.add_modifier(trait)
         self.add_handler(trait)
 
     def remove_trait(self, trait):
@@ -158,7 +176,6 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         defined in regicide.data.traits
         '''
         self._traits.remove(trait)
-        self.remove_modifier(trait)
         self.remove_handler(trait)
         
     @property
@@ -172,7 +189,6 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Adds an effect to this entity.
         '''
         self._effects.append(effect)
-        self.add_modifier(effect)
         self.add_handler(effect)
 
     def remove_effect(self, effect):
@@ -180,7 +196,6 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Removes an effect from this entity.
         '''
         self._effects.remove(effect)
-        self.remove_modifier(effect)
         self.remove_handler(effect)
         
     @property
@@ -217,22 +232,14 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Also adds any modifiers that this item has.
         Returns success or failure.
         '''
-        if (item not in self._inventory):
+        if item not in self._inventory:
             self.add_item(item)
         
-        equip_slot = item.properties['equip_slot']
-        equip_size = item.properties['equip_size']
-        free_space = equip_slot.size
+        if self._equipment.has_key(item.equip_slot) is False:
+            self._equipment[item.equip_slot] = []
         
-        if (self._equipment.has_key(equip_slot) is False):
-            self._equipment[equip_slot] = []
-        else:
-            for item in self._equipment[equip_slot]:
-                free_space -= item['equip_size']
-        
-        if (equip_size <= free_space):
-            self._equipment[equip_slot].append(item)
-            self.add_modifier(item)
+        if self.could_equip(item):
+            self._equipment[item.equip_slot].append(item)
             self.add_handler(item)
             return True
         else:
@@ -244,14 +251,25 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         Also removes any modifiers that this item has.
         Returns success or failure.
         '''
-        equip_slot = item.properties['equip_slot']
-        if (self._equipment.has_key(equip_slot) and item in self._equipment[equip_slot]):
-            self._equipment[equip_slot].remove(item)
-            self.remove_modifier(item)
+        if self._equipment.has_key(item.equip_slot) and item in self._equipment[item.equip_slot]:
+            self._equipment[item.equip_slot].remove(item)
             self.remove_handler(item)
             return True
         else:
             return False
+    
+    def could_equip(self, item):
+        '''
+        Checks to see if a given item could be equipped on this entity.
+        '''
+        equip_slot = item.equip_slot
+        free_space = equip_slot.size
+        
+        if self._equipment.has_key(equip_slot):
+            for equip in self._equipment[equip_slot]:
+                free_space -= equip.equip_size
+        
+        return item.equip_size <= free_space
     
     def get_equips(self, equip_slot):
         '''
@@ -264,80 +282,58 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         return self._equipment
         
     # ==================================
-        
-    def add_modifier(self, modifier_set):
-        '''
-        Adds a set of property modifiers to this entity.
-        The relevant properties are then recalculated.
-        '''
-        properties = modifier_set.properties['modifiers']
-        for key, modifier in properties.iteritems():
-            if (self._modifiers.has_key(key) is False):
-                self._modifiers[key] = {}
-            
-            self._modifiers[key][modifier_set] = modifier
-        
-        self.recalculate_properties(properties.keys())
-        
-    def remove_modifier(self, modifier_set):
-        '''
-        Removes a set of property modifiers from this entity.
-        The relevant properties are then recalculated.
-        '''
-        properties = modifier_set.properties['modifiers']
-        for key in properties.iterkeys():
-            self._modifiers[key].pop(modifier_set)
-        
-        self.recalculate_properties(properties.keys())
     
     def recalculate_properties(self, update_list = None):
         '''
         Recalculates each property in a given list.
         This is typically called after property modifiers are added/removed
         '''
-        if (update_list is None):
+        if update_list is None:
             update_list = self._base_properties.keys()
         
         for prop in update_list:
-            if (type(prop.base) == properties.Property):
+            if type(prop.base) == properties.Property:
                 value = self._base_properties[prop.base]
             else:
                 value = prop.base
             
-            if (self._base_properties.has_key(prop)):
+            if self._base_properties.has_key(prop):
                 value = self._base_properties[prop]
             
-            if (self._modifiers.has_key(prop)):
-                for modifier in self._modifiers[prop].itervalues():
-                    value = self.apply_modifier(value, modifier)
-            
-            self._properties[prop] = value
+            self._properties[prop] = self.filter_property(prop, value)
     
-    def apply_modifier(self, value, modifier):
-        '''
-        Returns the given value modified by the given modifier.
-        '''
-        if (type(modifier) == types.FunctionType):
-            # If the modifier is a function pass the value to it and return the result.
-            return modifier(self, value)
+    def filter_property(self, prop, value):
+        return self.filter('modify_property', value, prop, self)
+        
+    def get_property_modifiers(self, prop):
+        if (type(prop.base) == properties.Property):
+            value = self._base_properties[prop.base]
         else:
-            operation = modifier[0]
-            adjustment = modifier[1]
+            value = prop.base
+        
+        if (self._base_properties.has_key(prop)):
+            value = self._base_properties[prop]
+        
+        modifications = []
+        for item in self.handlers['modify_property']:
+            handler = item[1]
+            func = getattr(handler, 'modify_property')
+            response = func(value, prop, self)
             
-            if (operation == '+'):
-                return value + adjustment
-            elif (operation == '-'):
-                return value - adjustment
-            elif (operation == '*'):
-                return value * adjustment
-            elif (operation == '/'):
-                return value / adjustment
+            if response is not None:
+                modifications.append((response - value, handler.name))
+                value = response
+        
+        return modifications
         
     @property
     def modifiers(self):
         return self._modifiers
         
     # ==================================
+    
+    def is_player(self):
+        return False
     
 Entity.register_dispatch_type('modify_property');
 Entity.register_dispatch_type('on_turn_start');

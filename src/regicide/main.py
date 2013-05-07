@@ -18,6 +18,7 @@ def init_states(window):
     game_model = model.game.Game()
     global_controller = controller.controller.Controller(game_model)
     
+    print("Initializing Game States...")
     State('game',
         window     = window,
         model      = game_model,
@@ -62,7 +63,9 @@ def init_states(window):
     game_model.next_turn()
 
 if __name__ == '__main__':
-    init_states(window.MasterView())
+    window = window.MasterView()
+    init_states(window)
     atexit.register(on_exit)
     
+    print("Starting Game Loop...")
     pyglet.app.run()

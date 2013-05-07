@@ -67,7 +67,7 @@ class MapGenerator(object):
         for i in range(0, int(self.room_quantity)):
             while not self.generate_room():
                 pass
-            
+        
         for i in range(0, int(self.room_quantity / 6)):
             while not self.generate_door():
                 pass

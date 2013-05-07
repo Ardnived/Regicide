@@ -6,7 +6,7 @@ Created on Mar 24, 2013
 import abc
 from random import randint
 from regicide.entity.entity import Entity
-from regicide import actions
+from regicide.entity import actions
 
 class NPC(Entity):
     '''
@@ -27,20 +27,24 @@ class NPC(Entity):
         Executes this NPC's turn AI, and then returns the amount of time till it can act again.
         '''
         possible_moves = [
-            [self.x+1, self.y],
-            [self.x-1, self.y],
-            [self.x, self.y+1],
-            [self.x, self.y-1],
-            [self.x+1, self.y+1],
-            [self.x+1, self.y-1],
-            [self.x-1, self.y+1],
-            [self.x-1, self.y-1],
+            (self.x+1, self.y),
+            (self.x-1, self.y),
+            (self.x, self.y+1),
+            (self.x, self.y-1),
+            (self.x+1, self.y+1),
+            (self.x+1, self.y-1),
+            (self.x-1, self.y+1),
+            (self.x-1, self.y-1),
         ]
         target = possible_moves[randint(0, len(possible_moves)-1)]
         
         tile = game.map.get_tile(*target)
-        if (tile is not None and tile.is_passable()):
-            game.execute(actions.misc.Move(), *target)
+        if tile is not None and tile.is_passable():
+            game.execute_action(actions.action.ActionInstance(
+                source = self, 
+                action = actions.misc.Move(), 
+                target = target,
+            ))
         
         game.end_turn(randint(60, 120))
     

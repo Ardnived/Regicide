@@ -18,7 +18,7 @@ class TileMap(object):
         self.height = height
         
     def get_tile(self, x, y):
-        if (0 <= x and x < self.width and 0 <= y and y < self.height):
+        if 0 <= x and x < self.width and 0 <= y and y < self.height:
             return self.grid[x][y]
         else:
             return None

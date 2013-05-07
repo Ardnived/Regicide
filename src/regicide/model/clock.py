@@ -8,6 +8,7 @@ Meaning it can't be reused, and is currently solely being used to organize the c
 '''
 import abc
 import heapq
+from regicide.model import event
 
 class TurnClock(object):
     __metaclass__ = abc.ABCMeta
@@ -17,16 +18,16 @@ class TurnClock(object):
         self.current_time = 0
         self.current_entity = None
     
-    def end_turn(self, next_turn):
+    def end_turn(self, next_turn=False):
         '''
         Ends the current entity's turn, and executes the next turn.
         :param next_turn: the time until this entity can act again. Or False
         '''
         #TODO: remove this log_message, it shouldn't really be here.
-        self.log_message("Executed turn ["+str(self.current_time)+"] for "+self.current_entity.name)
-        self.do_update('log')
+        #self.log_message("Executed turn ["+str(self.current_time)+"] for "+self.current_entity.name)
+        #self.do_update('log')
         
-        if (next_turn is not False):
+        if next_turn is not False:
             self.schedule_turn(next_turn, self.current_entity)
             self.current_entity = None
         
@@ -58,9 +59,12 @@ class TurnClock(object):
         self.current_entity = turn[1]
         time_passed = turn[2]
         
-        self.current_entity.dispatch_event('on_turn_start', self, self.current_entity, time_passed)
-        self.current_entity.on_turn(self)
-        self.current_entity.dispatch_event('on_turn_end', self, self.current_entity)
+        #TODO: fix this, which hangs the game.
+        #response = self.current_entity.on_turn_start(self, time_passed)
+        response = self.current_entity.dispatch_event('on_turn_start', self, self.current_entity, time_passed)
+        if response is not event.EVENT_CANCELED:
+            self.current_entity.on_turn(self)
+            self.current_entity.dispatch_event('on_turn_end', self, self.current_entity)
     
     
     
