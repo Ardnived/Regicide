@@ -5,11 +5,14 @@ Created on Mar 9, 2013
 
 Contains code for generating the game's levels.
 '''
+import random
+import math
 from random import randint
 from regicide.entity.npc import NPC
 from regicide import data
 from regicide.level.map import TileMap
 from regicide.level.tile import Tile
+from regicide.level.room import Room
 from regicide.data.blueprints import Blueprint
 
 class MapGenerator(object):
@@ -33,162 +36,102 @@ class MapGenerator(object):
         self.width = width
         self.height = height
         
-        self.room_quantity = ((self.width + self.height)/2)/2
+        self.room_quantity = ((self.width + self.height)/2)/1
         self.guard_quantity = ((self.width + self.height)/2)/3
         
         self.zone = zone
         self.floor = floor
-        self.room_grid = []
-        self.grid = []
         
+        self.clean()
+        
+    def clean(self):
+        self.grid = []
+        self.room_grid = []
+        self.rooms = {}
+    
+    def prepare(self):
         for x in range(self.extended_width):
             self.grid.append([])
             self.room_grid.append([])
-            for y in range(self.extended_height):
-                self.grid[x].append(" ")
+            for _ in range(self.extended_height):
+                self.grid[x].append(None)
                 self.room_grid[x].append(None)
-         
-    def generate(self):
-        '''
-        Generate a level based on this generator's parameters.
-        '''
-        tile_map = TileMap(self.extended_width, self.extended_height)
-        
-        print("Creating "+str(self.room_quantity)+" rooms and "+str(self.guard_quantity)+" guards in a "+str(self.extended_width)+"x"+str(self.extended_height)+" area.")
-        
-        rooms = Blueprint.find_blueprints(type="stairwell", zone=self.zone, floor=self.floor)
-        room = rooms[randint(0, len(rooms)-1)].master()
-        
-        x = self.min_x + randint((self.width*1/4), (self.width*3/4) - room.properties['width'])
-        y = self.min_y + randint((self.height*1/4), (self.height*3/4) - room.properties['height'])
-        
-        self.place_room(room, x, y)
-        self.grid[x][y] = "%"
-        for i in range(0, int(self.room_quantity)):
-            while not self.generate_room():
-                pass
-        
-        for i in range(0, int(self.room_quantity / 6)):
-            while not self.generate_door():
-                pass
-        
-        for x in range(self.extended_width):
-            tile_map.grid.append([])
-            for y in range(self.extended_height):
-                tile = self.grid[x][y]
-                if (tile == "#"):
-                    tile = Tile(Tile.WALL)
-                elif (tile == " "):
-                    tile = None
-                elif (tile == "%"):
-                    tile = Tile(Tile.STAIRS_UP)
-                elif (tile == "^"):
-                    tile = Tile(Tile.DOOR)
-                else:
-                    tile = Tile(Tile.FLOOR)
-                
-                tile_map.grid[x].append(tile)
-        
-        for i in range(0, int(self.guard_quantity)):
-            tile = None
-            while (tile is None or not tile.is_passable()):
-                location = [randint(0, self.extended_width), randint(0, self.extended_height)]
-                tile = tile_map.get_tile(*location)
-            
-            tile.entity = NPC(data.units.GOBLIN.master(), *location)
-        
-        tile_map.room_grid = self.room_grid
-        
-        return tile_map
     
-    def generate_room(self):
+    def random_location(self, tile_type = None, buffer_x = 0, buffer_y = 0):
+        x = self.min_x + randint(0, self.width - buffer_x)
+        y = self.min_y + randint(0, self.height - buffer_y)
+
+        if tile_type is not None:
+            while self.grid[x][y] != tile_type:
+                x = self.min_x + randint(0, self.width - buffer_x)
+                y = self.min_y + randint(0, self.height - buffer_y)
+        
+        return (x, y)
+    
+    def rect_is_empty(self, x1, y1, x2, y2):
         '''
-        Find a location for and create a new room.
-        Returns success or failure.
+        Returns whether a specific area of the map is empty.
         '''
-        pivot = None
-        while pivot is None:
-            pivot = self.pick_room_pivot()
-            
-        return self.try_room(*pivot)
+        if x1 < 1 or y1 < 1 or x2 > self.extended_width-1 or y2 > self.extended_height-1:
+            return False
         
-    def try_room(self, pivot_x, pivot_y, facing, origin_room):
-        '''
-        Tries to branch a room off of a given pivot.
-        '''
-        connections = origin_room.properties['connections']
-        if (type(connections) != list):
-            connections = [connections]
-        
-        room = self.choose_room(connections)
-        
-        if (room is None):
-            self.generate_room()
-            return;
-        
-        room_width = room.properties['width']
-        room_height = room.properties['height']
-        
-        if (facing == "north" or facing == "south"):
-            if (facing == "north"):
-                y = pivot_y + 1
-            else:
-                y = pivot_y - room_height
-            
-            i = 0
-            x = pivot_x - randint(0, room_width-1)
-            while not self.rect_is_empty(x, y, x + room_width, y + room_height):
-                if (i > room_width):
+        for x in xrange(x1, x2):
+            for y in xrange(y1, y2):
+                if self.grid[x][y] is not None:
                     return False
-                else:
-                    x = pivot_x - randint(0, room_width-1)
-                    i += 1
-            
-        elif (facing == "east" or facing == "west"):
-            if (facing == "east"):
-                x = pivot_x + 1
-            else:
-                x = pivot_x - room_width
-            
-            i = 0
-            y = pivot_y - randint(0, room_height-1)
-            while not self.rect_is_empty(x, y, x + room_width, y + room_height):
-                if (i > room_height):
-                    return False
-                else:
-                    y = pivot_y - randint(0, room_height-1)
-                    i += 1
         
-        self.place_room(room, x, y)
-        self.grid[pivot_x][pivot_y] = "^"
         return True
     
     def pick_room_pivot(self):
         '''
         Returns a random pivot chosen from across the map.
         '''
-        x = randint(self.min_x, self.max_x)
-        y = randint(self.min_y, self.max_y)
-        
-        if (self.grid[x][y] == "#"):
-            if (self.grid[x-1][y] == " " and self.grid[x+1][y] == "."):
+        while True:
+            x, y = self.random_location(Tile.WALL)
+            
+            if self.grid[x-1][y] is None and self.grid[x+1][y] == Tile.FLOOR:
                 facing = "west"
                 origin_room = self.room_grid[x+1][y]
-            elif (self.grid[x-1][y] == "." and self.grid[x+1][y] == " "):
+            elif self.grid[x-1][y] == Tile.FLOOR and self.grid[x+1][y] is None:
                 facing = "east"
                 origin_room = self.room_grid[x-1][y]
-            elif (self.grid[x][y-1] == " " and self.grid[x][y+1] == "."):
+            elif self.grid[x][y-1] is None and self.grid[x][y+1] == Tile.FLOOR:
                 facing = "south"
                 origin_room = self.room_grid[x][y+1]
-            elif (self.grid[x][y-1] == "." and self.grid[x][y+1] == " "):
+            elif self.grid[x][y-1] == Tile.FLOOR and self.grid[x][y+1] is None:
                 facing = "north"
                 origin_room = self.room_grid[x][y-1]
             else:
-                return None;
+                continue
+            
+            if origin_room.count_connections() >= origin_room.max_connections:
+                continue
             
             return [x, y, facing, origin_room]
     
-    def choose_room(self, domains):
+    def place_room(self, room, origin_x, origin_y):
+        '''
+        Creates a room at the specified origin.
+        This method should first be checked with the rect_is_empty function.
+        '''
+        
+        for x in [origin_x - 1, origin_x + room.width]:
+            for y in xrange(origin_y - 1, origin_y + room.height + 1):
+                self.grid[x][y] = Tile.WALL
+        
+        for x in xrange(origin_x, origin_x + room.width):
+            self.grid[x][origin_y-1] = Tile.WALL
+            self.grid[x][origin_y + room.height] = Tile.WALL
+            for y in xrange(origin_y, origin_y + room.height):
+                self.grid[x][y] = Tile.FLOOR
+                self.room_grid[x][y] = room
+                
+        x = origin_x + (room.width / 2)
+        y = origin_y + (room.height / 2)
+        
+        self.rooms[room] = (origin_x, origin_y)
+    
+    def create_room(self, domains):
         '''
         Chooses a room with the given domains.
         '''
@@ -197,97 +140,190 @@ class MapGenerator(object):
             rooms.extend(Blueprint.find_blueprints(type=domain, zone=self.zone, floor=self.floor))
         
         if len(rooms) != 0:
-            return rooms[randint(0, len(rooms)-1)].master()
-    
-    def rect_is_empty(self, x1, y1, x2, y2):
-        '''
-        Returns whether a specific area of the map is empty.
-        '''
-        if (x1 < 1 or y1 < 1 or x2 > len(self.grid)-1 or y2 > len(self.grid[0])-1):
-            return False
+            return Room(random.choice(rooms).master())
         
-        for x in range(x1, x2):
-            for y in range(y1, y2):
-                if (self.grid[x][y] != " "):
-                    #self.grid[x][y] = "/"
-                    return False
+    def decode_map(self):
+        tile_map = TileMap(self.extended_width, self.extended_height)
+        
+        for x in xrange(self.extended_width):
+            tile_map.grid.append([])
+            for y in xrange(self.extended_height):
+                tile = self.grid[x][y]
+                if tile == None:
+                    tile = None
                 else:
-                    pass
-                    #self.grid[x][y] = "_"
-        
-        return True
-    
-    def place_room(self, master, origin_x, origin_y):
-        '''
-        Creates a room at the specified origin.
-        This method should first be checked with the rect_is_empty function.
-        '''
-        room_width = master.properties['width']
-        room_height = master.properties['height']
-        
-        for x in [origin_x - 1, origin_x + room_width]:
-            for y in range(origin_y - 1, origin_y + room_height + 1):
-                self.grid[x][y] = "#"
-        
-        for x in range(origin_x, origin_x + room_width):
-            self.grid[x][origin_y-1] = "#"
-            self.grid[x][origin_y+room_height] = "#"
-            for y in range(origin_y, origin_y + room_height):
-                self.grid[x][y] = "."
-                self.room_grid[x][y] = master
+                    tile = Tile(tile, self.room_grid[x][y])
                 
-        x = origin_x + (room_width/2)
-        y = origin_y + (room_height/2)
+                if tile is not None:
+                    tile.room = self.room_grid[x][y]
+                
+                tile_map.grid[x].append(tile)
         
-        self.grid[x][y] = master.properties['name'][0]
-        
-    def generate_door(self):
-        pivot = None
-        while pivot is None:
-            pivot = self.pick_door_pivot()
-            
-        return self.try_door(*pivot)
-        
-    def pick_door_pivot(self):
-        '''
-        Returns a random pivot chosen from across the map.
-        '''
-        x = randint(self.min_x, self.max_x)
-        y = randint(self.min_y, self.max_y)
-        
-        if (self.grid[x][y] == "#"):
-            if (self.grid[x-1][y] == "." and self.grid[x+1][y] == "."):
-                room_1 = self.room_grid[x-1][y]
-                room_2 = self.room_grid[x+1][y]
-            elif (self.grid[x][y-1] == "." and self.grid[x][y+1] == "."):
-                room_1 = self.room_grid[x][y-1]
-                room_2 = self.room_grid[x][y+1]
-            else:
-                return None;
-            
-            return [x, y, room_1, room_2]
-        
-    def try_door(self, x, y, room_1, room_2):
-        '''
-        Places a door at the given x/y coords, if a connection between room_1 and room_2 is valid.
-        Returns success or failure.
-        '''
-        if (self.is_connection_valid(room_1, room_2)):
-            self.grid[x][y] = "^"
-            return True
-        else:
-            return False
-        
-    def is_connection_valid(self, room_1, room_2):
-        '''
-        Checks to see if a connection between the two given rooms would be valid.
-        '''
-        for type in room_1.blueprint.domains['type']:
-            if (type in room_2.properties['connections']):
-                return True
+        return tile_map
+    
+    def decorate_rooms(self, tile_map):
+        for room, location in self.rooms.iteritems():
+            room.decorate(tile_map, *location)
 
-#gen = MapGenerator(width=20, height=20)
-#map = gen.generate()
-#
-#for column in gen.grid:
-#    print("".join(column))
+    def generate(self):
+        print("Creating "+str(self.room_quantity)+" rooms and "+str(self.guard_quantity)+" guards in a "+str(self.extended_width)+"x"+str(self.extended_height)+" area.")
+        self.prepare()
+
+class CastleGenerator(MapGenerator):
+
+    def generate(self):
+        MapGenerator.generate(self)
+        
+        print("Creating 3 stairwells.")
+        self.create_stairwells(3)
+        print("Creating "+str(self.room_quantity)+" rooms.")
+        self.create_rooms(self.room_quantity)
+        
+        print("Decoding map.")
+        tile_map = self.decode_map()
+        print("Decorating rooms.")
+        self.decorate_rooms(tile_map)
+        print("Creating passages.")
+        self.create_passages(tile_map, random.randint(3, 7))
+        
+        self.clean()
+        return tile_map
+    
+    def create_stairwells(self, quantity):
+        for _ in xrange(quantity):
+            room = self.create_room(["stairwell"])
+            location = self.random_location(None, room.width, room.height)
+            x, y = location
+            
+            while not self.rect_is_empty(x, y, x + room.width, y + room.height):
+                location = self.random_location(None, room.width, room.height)
+                x, y = location
+                
+            self.place_room(room, x, y)
+            self.grid[x][y] = Tile.STAIRS_UP # TODO: What about down stairs?
+            
+    def create_rooms(self, quantity):
+        placed_count = 0
+        
+        while placed_count < quantity:
+            room = None
+            while room is None:
+                pivot_x, pivot_y, facing, origin_room = self.pick_room_pivot()
+                room = self.create_room(origin_room.connection_types)
+            
+            if facing == "north" or facing == "south":
+                if facing == "north":
+                    y = pivot_y + 1
+                else:
+                    y = pivot_y - room.height
+                
+                i = 0
+                x = pivot_x - randint(0, room.width-1)
+                while i < room.width:
+                    x = pivot_x - randint(0, room.width-1)
+                    if self.rect_is_empty(x, y, x + room.width, y + room.height):
+                        break
+                    else:
+                        i += 1
+                else:
+                    continue # Can't fit this room here.
+                
+            elif facing == "east" or facing == "west":
+                if facing == "east":
+                    x = pivot_x + 1
+                else:
+                    x = pivot_x - room.width
+                
+                i = 0
+                y = pivot_y - randint(0, room.height-1)
+                while i < room.height:
+                    y = pivot_y - randint(0, room.height-1)
+                    if self.rect_is_empty(x, y, x + room.width, y + room.height):
+                        break
+                    else:
+                        i += 1
+                else:
+                    continue # Can't fit this room here.
+            
+            self.place_room(room, x, y)
+            origin_room.add_connection(x, y, room)
+            room.add_connection(x, y, origin_room)
+            self.grid[pivot_x][pivot_y] = Tile.DOOR
+            placed_count += 1
+        
+    def create_passages(self, tile_map, quantity):
+        placed_count = 0
+        
+        max_attempts = quantity * 2
+        attempts = 0
+        
+        while placed_count < quantity and attempts < max_attempts:
+            origin_room, location = random.choice(self.rooms.items())
+            origin_x, origin_y = location
+            
+            if origin_room.allow_passages is False:
+                continue
+            
+            target_room = random.choice(self.rooms.keys())
+            while target_room == origin_room or target_room.allow_passages is False:
+                target_room = random.choice(self.rooms.keys())
+            
+            target_x, target_y = self.rooms[target_room]
+            distance = math.sqrt(abs((target_x - origin_x)**2 + (target_y - origin_y)**2))
+                
+            if distance > 7: # Don't choose rooms which are too close together.
+                walls = origin_room.get_available_walls(tile_map, origin_x, origin_y, interior=False)
+                if len(walls) < 1:
+                    continue
+                else:
+                    origin_x, origin_y = random.choice(walls)
+                    
+                walls = target_room.get_available_walls(tile_map, target_x, target_y, interior=False)
+                if len(walls) < 1:
+                    continue
+                else:
+                    target_x, target_y = random.choice(walls)
+                
+                path = tile_map.find_path(tile_map.ALGORITHM_ASTAR_PASSAGE, origin_x, origin_y, target_x, target_y)
+                if path is None:
+                    continue
+                else:
+                    tile_map.grid[origin_x][origin_y] = Tile(Tile.SECRET_DOOR)
+                    tile_map.grid[target_x][target_y] = Tile(Tile.SECRET_DOOR)
+                    for x, y in path:
+                        adjacent = [
+                            (x+1, y),
+                            (x-1, y),
+                            (x, y+1),
+                            (x, y-1),
+                            (x+1, y+1),
+                            (x-1, y+1),
+                            (x+1, y-1),
+                            (x-1, y-1),
+                        ]
+                        tile_map.grid[x][y] = Tile(Tile.FLOOR)
+                        
+                        for adj_x, adj_y in adjacent:
+                            if tile_map.get_tile(adj_x, adj_y) is None:
+                                tile_map.grid[adj_x][adj_y] = Tile(Tile.WALL)
+                
+                placed_count += 1
+                
+            attempts += 1
+        
+        print(str(placed_count)+" passages were created.")
+                
+
+class DungeonGenerator(MapGenerator):
+
+    def generate(self):
+        MapGenerator.generate(self)
+        
+        return self.decode_map()
+
+class CaveGenerator(MapGenerator):
+
+    def generate(self):
+        MapGenerator.generate(self)
+        
+        return self.decode_map()

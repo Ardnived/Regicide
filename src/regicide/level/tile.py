@@ -16,6 +16,7 @@ TARGET_DOOR     = 'door'
 TARGET_FLOOR    = 'floor'
 TARGET_ROUGH    = 'rough'
 TARGET_WALL     = 'wall'
+TARGET_OPAQUE   = 'opaque'
 
 class Tile(object):
     
@@ -27,7 +28,13 @@ class Tile(object):
     
     FLOOR = {
         'sprites' : [visual.Tile.BLOCK, visual.Tile.BLOCK, visual.Tile.BLOCK_CRACKED],
-        'ascii'   : visual.ASCII.get_index(13, 13),
+        'ascii'   : visual.ASCII.get_index(13, 13), #(11, 3), #(13, 13),
+        'type'    : [TARGET_FLOOR, TARGET_PASSABLE]
+    }
+    
+    LIGHT = {
+        'sprites' : [visual.Tile.PLINTH_EYE],
+        'ascii'   : visual.ASCII.get_index(8, 9),
         'type'    : [TARGET_FLOOR, TARGET_PASSABLE]
     }
     
@@ -46,7 +53,7 @@ class Tile(object):
     WALL = {
         'sprites' : [visual.Tile.PLINTH_LIGHT],
         'ascii'   : visual.ASCII.get_index(7, 0),
-        'type'    : [TARGET_WALL]
+        'type'    : [TARGET_WALL, TARGET_OPAQUE]
     }
     
     DOOR = {
@@ -55,28 +62,55 @@ class Tile(object):
         'type'    : [TARGET_DOOR, TARGET_PASSABLE]
     }
     
-    def __init__(self, template=None):
+    SECRET_DOOR = {
+        'sprites' : [visual.Tile.COLUMNS_GATE],
+        'ascii'   : visual.ASCII.get_index(2, 13),
+        'type'    : [TARGET_DOOR, TARGET_PASSABLE]
+    }
+    
+    DECORATION = {
+        'sprites' : [visual.Tile.TILES],
+        'ascii'   : visual.ASCII.get_index(11, 13),
+        'type'    : [TARGET_PASSABLE]
+    }
+    
+    def __init__(self, template=None, room=None):
         '''
         Constructor
         '''
-        if (template is not None):
+        if template is not None:
             image = template['sprites'][random.randint(0, len(template['sprites'])-1)]
             
             self.type = template['type']
             self.sprite = sprite.Sprite(visual.Tile.get(image))
             self.ascii = sprite.Sprite(visual.ASCII.get(template['ascii']))
         
-        self.no_shadow = True
-        self.shadow = sprite.Sprite(visual.Tile.get(visual.Tile.SHADE_1))
         self.decoration = None
         self.entity = None
+        self.room = None
         self.items = []
+        self.explored = True # TODO: This should be False, but I'm testing things atm.
+        self._shadow = 8
+        
+    @property
+    def shadow(self):
+        return max(0, min(self._shadow, 8))
+    
+    @shadow.setter
+    def shadow(self, value):
+        self._shadow = value
         
     def is_passable(self):
         '''
         Returns whether this tile can be entered by an entity.
         '''
         return TARGET_PASSABLE in self.type
+        
+    def is_opaque(self):
+        '''
+        Returns whether this tile can be entered by an entity.
+        '''
+        return TARGET_OPAQUE in self.type
     
     def is_unoccupied(self):
         '''
@@ -88,10 +122,9 @@ class Tile(object):
         target_types = set(self.type)
         
         if self.entity is not None:
-            print('add entity')
             target_types.add(TARGET_ENTITY)
             
-            if self.entity == State.model().current_entity:
+            if State.model() is not None and self.entity == State.model().current_entity:
                 target_types.add(TARGET_SELF)
         
         if self.items != []:

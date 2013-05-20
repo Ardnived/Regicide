@@ -57,6 +57,10 @@ class Tile(ImageSet):
     @staticmethod
     def get(index):
         return Tile.instance.get(index)
+    
+    @staticmethod
+    def get_shadow(index):
+        return Tile.get(23 + index)
 
 class Misc(ImageSet):
     SYMBOL_PENTAGRAM, SYMBOL_ANKH, SYMBOL_EYE, SYMBOL_TRI, SYMBOL_DIRECTIONS, SYMBOL_PERSON, BANNER, SIGN = range(8)

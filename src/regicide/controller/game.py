@@ -104,7 +104,7 @@ class GameHotspot(Hotspot):
         Hotspot.__init__(self, x, y, width, height, rows, columns, hover_type)
         
     def on_click(self, model, button, modifiers):
-        if (self.selection_x != model.player.x or self.selection_y != model.player.y):
+        if self.selection_x != model.player.x or self.selection_y != model.player.y:
             player_x = model.player.x
             player_y = model.player.y
             grid_x = player_x - self.grid_width/2
@@ -112,28 +112,37 @@ class GameHotspot(Hotspot):
             click_x = self.selection_x + grid_x
             click_y = self.selection_y + grid_y
             
-            room = model.map.room_grid[click_x][click_y]
-            if (room is not None):
-                model.log_message("Selected "+room.properties['name'])
-                model.do_update('log')
-            
-            if (player_x == click_x):
-                if (player_y > click_y):
+            if player_x == click_x:
+                if player_y > click_y:
                     model.activate_command(commands.get('south'))
                 else:
                     model.activate_command(commands.get('north'))
-            elif (player_x > click_x):
-                if (player_y > click_y):
+            elif player_x > click_x:
+                if player_y > click_y:
                     model.activate_command(commands.get('southwest'))
-                elif (player_y < click_y):
+                elif player_y < click_y:
                     model.activate_command(commands.get('northwest'))
                 else:
                     model.activate_command(commands.get('west'))
-            elif (player_x < click_x):
-                if (player_y > click_y):
+            elif player_x < click_x:
+                if player_y > click_y:
                     model.activate_command(commands.get('southeast'))
-                elif (player_y < click_y):
+                elif player_y < click_y:
                     model.activate_command(commands.get('northeast'))
                 else:
                     model.activate_command(commands.get('east'))
-
+    
+    def on_select(self, model, x, y):
+        Hotspot.on_select(self, model, x, y)
+        
+        tile = model.map.get_tile(self.grid_x + x, self.grid_y + y)
+        text = None
+        
+        if tile is not None:
+            if tile.entity is not None:
+                text = tile.entity.name
+            elif tile.room is not None:
+                text = tile.room.name + " " + str(tile.room.count_connections())
+        
+        model.display_info(text)
+        model.do_update('log')

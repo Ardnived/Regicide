@@ -61,7 +61,7 @@ class EventDispatcher(Dispatcher):
 class FilterDispatcher(Dispatcher):
         
     def filter(self, filter_type, value, *args):
-        print("Filtering "+args[0].name+", "+str(value))
+        #print("Filtering "+args[0].name+", "+str(value))
         for item in self.handlers[filter_type]:
             handler = item[1]
             func = getattr(handler, filter_type)

@@ -67,7 +67,7 @@ class ListLayer(Layer):
         self.rows = int(self.height / line_height)
         self.columns = columns
         
-        if (column_width is None):
+        if column_width is None:
             self.column_width = width / columns
         else:
             self.column_width = column_width
@@ -113,10 +113,10 @@ class ActiveListLayer(ListLayer, Hotspot):
         '''
         index_x = 0
         index_y = 0
-        line_height = self.height / self.rows
+        line_height = int(self.height / self.rows)
         for column in self.items:
             index_y = 0
-            for cell in column:
+            for _ in column:
                 x = self.x + index_x*self.column_width
                 y = self.y + index_y*line_height
                 y2 = self.y + index_y*line_height + line_height

@@ -3,12 +3,13 @@ Created on Mar 23, 2013
 
 @author: Devindra
 '''
-from regicide.entity.entity import Entity
+from regicide.mvc import State
 from regicide.data import traits, items
+from regicide.entity.entity import Entity
 from regicide.entity.traits import Trait
 from regicide.entity.actions import voodoo
-from regicide.entity import effects
 from regicide.entity.items import Item
+from regicide.entity import effects, properties
 
 class Player(Entity):
     TURN = False
@@ -71,6 +72,17 @@ class Player(Entity):
         game.log_message("You die.")
         game.log_message("GAME OVER")
         game.do_update('log')
+        
+    def set(self, prop, value):
+        Entity.set(self, prop, value)
+        model = State.model()
+        
+        if value <= 3 and prop.type == properties.Property.TYPE_ATTR:
+            model.log_message("LOW ATTRIBUTE WARNING: "+prop.name)
+            model.do_update('log')
+        elif prop == properties.hp and value <= self.get(properties.max_hp)*0.4:
+            model.log_message("LOW HP WARNING: "+str(value))
+            model.do_update('log')
     
     def is_player(self):
         return True

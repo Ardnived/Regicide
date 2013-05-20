@@ -34,9 +34,7 @@ def move(game, x=0, y=0):
             y = hotspot.mouse_y + y*(hotspot.height / game.map.height)
             State.window().set_mouse_position(x, y)
             hotspot.on_hover(game, x, y)
-            game.do_update('tiles')
-            game.do_update('entities')
-            game.do_update('shadows')
+            game.do_update('bounds')
         
 def wait(game):
     if game.state != game.STATE_TARGET:

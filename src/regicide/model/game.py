@@ -27,13 +27,14 @@ class Game(event.EventDispatcher, clock.TurnClock):
         Constructor
         '''
         clock.TurnClock.__init__(self)
-        self.map = generator.MapGenerator(width=60, height=60).generate()
+        self.map = generator.CastleGenerator(width=60, height=60).generate()
         
         self.player = player.Player(characters.ELLIOT.master())
         player_tile = None
-        while (player_tile is None or not player_tile.is_unoccupied()):
+        while player_tile is None or not player_tile.is_unoccupied():
             player_location = [randint(0, self.map.width), randint(0, self.map.height)]
             player_tile = self.map.get_tile(*player_location)
+        
         player_tile.entity = self.player
         self.player.x = player_location[0]
         self.player.y = player_location[1]
@@ -156,9 +157,7 @@ class Game(event.EventDispatcher, clock.TurnClock):
         :param component: indicates which component to update.
         '''
         if self.state == Game.STATE_EXPLORE and component == 'cursor':
-            self.dispatch_event('update', 'entities')
-            self.dispatch_event('update', 'tiles')
-            self.dispatch_event('update', 'shadows')
+            self.dispatch_event('update', 'bounds')
         
         self.dispatch_event('update', component)
     
@@ -178,8 +177,7 @@ class Game(event.EventDispatcher, clock.TurnClock):
             self.do_update('log')
             
             if instance.type.range != sys.maxint:
-                self.do_update('tiles')
-                self.do_update('entities')
+                self.do_update('shadows')
         
     def set_state(self, state, **kargs):
         # Tear down the current state.

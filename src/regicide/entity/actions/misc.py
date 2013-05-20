@@ -51,8 +51,23 @@ class Move(Action):
             source.x = target[0]
             source.y = target[1]
             
-            game.do_update('cursor')
-            game.do_update('entities')
-            game.do_update('tiles')
-            game.do_update('shadows')
+            if source == game.player:
+                self.update_exploration(game)
+                
+                game.do_update('cursor')
+                game.do_update('bounds')
+    
+    def update_exploration(self, game):
+        strength = game.player.get(properties.perception)
+        
+        for x in xrange(-strength, strength+1):
+            range_y = strength - abs(x)
+            for y in xrange(-range_y, range_y+1):
+                target_x = game.player.x + x
+                target_y = game.player.y + y
+                tile = game.map.get_tile(target_x, target_y)
+                
+                if tile is not None and game.map.has_line_of_sight(game.player.x, game.player.y, target_x, target_y):
+                    tile.explored = True
+        
     

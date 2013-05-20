@@ -306,7 +306,7 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         return self.filter('modify_property', value, prop, self)
         
     def get_property_modifiers(self, prop):
-        if (type(prop.base) == properties.Property):
+        if type(prop.base) == properties.Property:
             value = self._base_properties[prop.base]
         else:
             value = prop.base

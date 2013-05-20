@@ -42,11 +42,11 @@ class Hotspot(object):
         
     @property
     def selection_x(self):
-        return (self.mouse_x - self.x) / (self.width / self.columns)
+        return int((self.mouse_x - self.x) / (self.width / self.columns))
     
     @property
     def selection_y(self):
-        return (self.mouse_y - self.y) / (self.height / self.rows)
+        return int((self.mouse_y - self.y) / (self.height / self.rows))
             
     def on_click(self, model, button, modifiers):
         pass

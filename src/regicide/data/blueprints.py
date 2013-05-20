@@ -41,7 +41,7 @@ class Blueprint(object):
         primary_key = domains.keys()[0]
         primary_value = domains.values()[0]
         
-        if (type(primary_value) == list):
+        if type(primary_value) == list:
             primary_value = primary_value[0]
         
         output = []
@@ -229,7 +229,7 @@ class Master(object):
         self.blueprint = blueprint
         self.properties = {}
         
-        if (parents is not None):
+        if parents is not None:
             for parent in parents:
                 parent = parent.master()
                 
@@ -237,26 +237,26 @@ class Master(object):
                 self.properties = merge_dicts(self.properties, parent.properties)
         
         # If properties is not empty:
-        if (properties):
+        if properties:
             # Loop through each property and evaluate it.
             for key, args in properties.iteritems():
                 value = self.evaluate(args)
                 
                 # If the property key starts with '+' then add the value to the parent's property.
-                if (key[0] == '+'):
+                if key[0] == '+':
                     key = key[1:]
-                    if (type(self.properties[key]) == list):
-                        if (type(value) == list):
+                    if type(self.properties[key]) == list:
+                        if type(value) == list:
                             self.properties[key].extend(value)
                         else:
                             self.properties[key].append(value)
                     else:
                         self.properties[key] += value
                 # If the property key starts with '-' then subtract from the parent's property.
-                elif (key[0] == '-'):
+                elif key[0] == '-':
                     key = key[1:]
-                    if (type(self.properties[key]) == list):
-                        if (type(value) == list):
+                    if type(self.properties[key]) == list:
+                        if type(value) == list:
                             for val in value:
                                 self.properties[key].remove(val)
                         else:
