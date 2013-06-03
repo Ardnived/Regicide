@@ -132,7 +132,7 @@ class InventoryLayer(ItemListLayer):
         for item in player.inventory:
             if item not in player.equipment[item.equip_slot]:
                 x = i / self.rows
-                y = self.rows - (i - self.rows*x) - 1
+                y = i - self.rows*x
                 
                 text = ""
                 text += " " * (InventoryLayer.NAME_COLUMN - len(text))
@@ -205,7 +205,7 @@ class EquipmentLayer(ItemListLayer):
             n = 0
             for item in items:
                 x = i / self.rows
-                y = self.rows - (i - self.columns*x) - 1
+                y = i - self.columns*x
                 
                 text = ""
                 text += " " * (EquipmentLayer.NAME_COLUMN - len(text))

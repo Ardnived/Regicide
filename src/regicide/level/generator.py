@@ -8,20 +8,22 @@ Contains code for generating the game's levels.
 import random
 import math
 from random import randint
-from regicide.entity.npc import NPC
-from regicide import data
+from regicide.data import tiles
 from regicide.level.map import TileMap
 from regicide.level.tile import Tile
 from regicide.level.room import Room
+from regicide.level.world import Direction
 from regicide.data.blueprints import Blueprint
 
 class MapGenerator(object):
     '''
     Defines code for generating levels based on a few parameters.
     '''
+    DEFAULT_WIDTH = 60
+    DEFAULT_HEIGHT = 60
     GUTTER = 5 # The number of tiles that a room can spill over the level's width and height.
 
-    def __init__(self, width=0, height=0, zone="castle", floor="commons"):
+    def __init__(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, zone="castle", floor="commons"):
         '''
         :param zone: the area in which this level exists, restricts room types.
         :param floor: the specific type of level to generate, restricts room types.
@@ -87,18 +89,18 @@ class MapGenerator(object):
         Returns a random pivot chosen from across the map.
         '''
         while True:
-            x, y = self.random_location(Tile.WALL)
+            x, y = self.random_location(tiles.WALL)
             
-            if self.grid[x-1][y] is None and self.grid[x+1][y] == Tile.FLOOR:
+            if self.grid[x-1][y] is None and self.grid[x+1][y] == tiles.FLOOR:
                 facing = "west"
                 origin_room = self.room_grid[x+1][y]
-            elif self.grid[x-1][y] == Tile.FLOOR and self.grid[x+1][y] is None:
+            elif self.grid[x-1][y] == tiles.FLOOR and self.grid[x+1][y] is None:
                 facing = "east"
                 origin_room = self.room_grid[x-1][y]
-            elif self.grid[x][y-1] is None and self.grid[x][y+1] == Tile.FLOOR:
+            elif self.grid[x][y-1] is None and self.grid[x][y+1] == tiles.FLOOR:
                 facing = "south"
                 origin_room = self.room_grid[x][y+1]
-            elif self.grid[x][y-1] == Tile.FLOOR and self.grid[x][y+1] is None:
+            elif self.grid[x][y-1] == tiles.FLOOR and self.grid[x][y+1] is None:
                 facing = "north"
                 origin_room = self.room_grid[x][y-1]
             else:
@@ -117,13 +119,13 @@ class MapGenerator(object):
         
         for x in [origin_x - 1, origin_x + room.width]:
             for y in xrange(origin_y - 1, origin_y + room.height + 1):
-                self.grid[x][y] = Tile.WALL
+                self.grid[x][y] = tiles.WALL
         
         for x in xrange(origin_x, origin_x + room.width):
-            self.grid[x][origin_y-1] = Tile.WALL
-            self.grid[x][origin_y + room.height] = Tile.WALL
+            self.grid[x][origin_y-1] = tiles.WALL
+            self.grid[x][origin_y + room.height] = tiles.WALL
             for y in xrange(origin_y, origin_y + room.height):
-                self.grid[x][y] = Tile.FLOOR
+                self.grid[x][y] = tiles.FLOOR
                 self.room_grid[x][y] = room
                 
         x = origin_x + (room.width / 2)
@@ -152,7 +154,8 @@ class MapGenerator(object):
                 if tile == None:
                     tile = None
                 else:
-                    tile = Tile(tile, self.room_grid[x][y])
+                    cls = tile['class']
+                    tile = cls(tile, self.room_grid[x][y])
                 
                 if tile is not None:
                     tile.room = self.room_grid[x][y]
@@ -165,43 +168,136 @@ class MapGenerator(object):
         for room, location in self.rooms.iteritems():
             room.decorate(tile_map, *location)
 
-    def generate(self):
+    def generate(self, options):
         print("Creating "+str(self.room_quantity)+" rooms and "+str(self.guard_quantity)+" guards in a "+str(self.extended_width)+"x"+str(self.extended_height)+" area.")
         self.prepare()
 
 class CastleGenerator(MapGenerator):
 
-    def generate(self):
-        MapGenerator.generate(self)
+    def generate(self, options):
+        MapGenerator.generate(self, options)
         
         print("Creating 3 stairwells.")
-        self.create_stairwells(3)
+        
+        stair_max = 3
+        stair_quantity = 0
+        
+        if options['connections'][Direction.UP] is not False:
+            for location in options['connections'][Direction.UP]:
+                self.create_stairwell(location, up=True)
+                stair_quantity += 1
+            
+        if options['connections'][Direction.DOWN] is not False:
+            for location in options['connections'][Direction.DOWN]:
+                self.create_stairwell(location, up=False)
+                stair_quantity += 1
+        
+        maximum = stair_max/2 - stair_quantity
+        if maximum > 0:
+            for _ in xrange(random.randint(1, maximum)):
+                self.create_stairwell(up=False)
+                stair_quantity += 1
+        
+        for _ in xrange(max(0, stair_max - stair_quantity)):
+            self.create_stairwell(up=True)
+        
         print("Creating "+str(self.room_quantity)+" rooms.")
         self.create_rooms(self.room_quantity)
+        
+        print("Creating exits.")
+        for direction in [Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST]:
+            if options['connections'][direction] is not False:
+                for _ in xrange(2):
+                    self.create_exit(direction)
         
         print("Decoding map.")
         tile_map = self.decode_map()
         print("Decorating rooms.")
         self.decorate_rooms(tile_map)
+        
         print("Creating passages.")
         self.create_passages(tile_map, random.randint(3, 7))
         
         self.clean()
         return tile_map
     
-    def create_stairwells(self, quantity):
-        for _ in xrange(quantity):
-            room = self.create_room(["stairwell"])
-            location = self.random_location(None, room.width, room.height)
-            x, y = location
+    def create_stairwell(self, location=None, up=False):
+        room = self.create_room(["stairwell"])
+        
+        if location is None:
+            x, y = self.random_location(None, room.width, room.height)
             
             while not self.rect_is_empty(x, y, x + room.width, y + room.height):
-                location = self.random_location(None, room.width, room.height)
-                x, y = location
-                
-            self.place_room(room, x, y)
-            self.grid[x][y] = Tile.STAIRS_UP # TODO: What about down stairs?
+                x, y = self.random_location(None, room.width, room.height)
+        else:
+            x, y = location
+        
+        self.place_room(room, x, y)
+        
+        if up:
+            self.grid[x][y] = tiles.STAIRS_UP
+        else:
+            self.grid[x][y] = tiles.STAIRS_DOWN
             
+        return (x, y)
+    
+    def create_exit(self, direction=None, location=None):
+        if Direction.AXIS_X in direction.axis:
+            if location == None:
+                location = random.randint(MapGenerator.GUTTER, self.height)
+                y = location
+            
+            if direction.x_offset > 0:
+                x = self.extended_width - 1
+                increment = -1
+            else:
+                x = 0
+                increment = +1
+            
+            origin_x = x
+            origin_y = location
+            
+            while self.grid[x][location] == None:# or self.grid[x][location] == Tile.WALL:
+                self.grid[x][location] = tiles.FLOOR
+                self.grid[x][location-1] = tiles.WALL
+                self.grid[x][location+1] = tiles.WALL
+                x += increment
+                
+            self.grid[x][location] = tiles.FLOOR
+                
+        elif Direction.AXIS_Y in direction.axis:
+            if location == None:
+                location = random.randint(MapGenerator.GUTTER, self.width)
+            
+            if direction.y_offset > 0:
+                y = self.extended_height - 1
+                increment = -1
+            else:
+                y = 0
+                increment = +1
+            
+            origin_x = location
+            origin_y = y
+            
+            while self.grid[location][y] == None:# or self.grid[location][y] == Tile.WALL:
+                self.grid[location][y] = tiles.FLOOR
+                self.grid[location-1][y] = tiles.WALL
+                self.grid[location+1][y] = tiles.WALL
+                y += increment
+        
+            self.grid[location][y] = tiles.FLOOR
+        
+        if direction == Direction.NORTH:
+            self.grid[origin_x][origin_y] = tiles.GATE_NORTH
+        elif direction == Direction.SOUTH:
+            self.grid[origin_x][origin_y] = tiles.GATE_SOUTH
+        elif direction == Direction.WEST:
+            self.grid[origin_x][origin_y] = tiles.GATE_WEST
+        elif direction == Direction.EAST:
+            self.grid[origin_x][origin_y] = tiles.GATE_EAST
+            
+        return (origin_x, origin_y)
+        
     def create_rooms(self, quantity):
         placed_count = 0
         
@@ -248,7 +344,7 @@ class CastleGenerator(MapGenerator):
             self.place_room(room, x, y)
             origin_room.add_connection(x, y, room)
             room.add_connection(x, y, origin_room)
-            self.grid[pivot_x][pivot_y] = Tile.DOOR
+            self.grid[pivot_x][pivot_y] = tiles.DOOR
             placed_count += 1
         
     def create_passages(self, tile_map, quantity):
@@ -288,8 +384,8 @@ class CastleGenerator(MapGenerator):
                 if path is None:
                     continue
                 else:
-                    tile_map.grid[origin_x][origin_y] = Tile(Tile.SECRET_DOOR)
-                    tile_map.grid[target_x][target_y] = Tile(Tile.SECRET_DOOR)
+                    tile_map.grid[origin_x][origin_y] = Tile(tiles.SECRET_DOOR)
+                    tile_map.grid[target_x][target_y] = Tile(tiles.SECRET_DOOR)
                     for x, y in path:
                         adjacent = [
                             (x+1, y),
@@ -301,11 +397,11 @@ class CastleGenerator(MapGenerator):
                             (x+1, y-1),
                             (x-1, y-1),
                         ]
-                        tile_map.grid[x][y] = Tile(Tile.FLOOR)
+                        tile_map.grid[x][y] = Tile(tiles.FLOOR)
                         
                         for adj_x, adj_y in adjacent:
                             if tile_map.get_tile(adj_x, adj_y) is None:
-                                tile_map.grid[adj_x][adj_y] = Tile(Tile.WALL)
+                                tile_map.grid[adj_x][adj_y] = Tile(tiles.WALL)
                 
                 placed_count += 1
                 
@@ -316,14 +412,14 @@ class CastleGenerator(MapGenerator):
 
 class DungeonGenerator(MapGenerator):
 
-    def generate(self):
-        MapGenerator.generate(self)
+    def generate(self, options):
+        MapGenerator.generate(self, options)
         
         return self.decode_map()
 
 class CaveGenerator(MapGenerator):
 
-    def generate(self):
-        MapGenerator.generate(self)
+    def generate(self, options):
+        MapGenerator.generate(self, options)
         
         return self.decode_map()

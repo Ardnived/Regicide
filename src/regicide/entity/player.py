@@ -68,7 +68,7 @@ class Player(Entity):
         game.do_update('log')
     
     def on_death(self, game):
-        game.map.get_tile(self.x, self.y).entity = None
+        game.move_entity(self, target=None)
         game.log_message("You die.")
         game.log_message("GAME OVER")
         game.do_update('log')
@@ -77,11 +77,13 @@ class Player(Entity):
         Entity.set(self, prop, value)
         model = State.model()
         
+        max_hp = self.get(properties.max_hp)
+        
         if value <= 3 and prop.type == properties.Property.TYPE_ATTR:
             model.log_message("LOW ATTRIBUTE WARNING: "+prop.name)
             model.do_update('log')
-        elif prop == properties.hp and value <= self.get(properties.max_hp)*0.4:
-            model.log_message("LOW HP WARNING: "+str(value))
+        elif prop == properties.hp and self.get(properties.hp) <= max_hp*0.4:
+            model.log_message("LOW HP WARNING: "+str(self.get(properties.hp)))
             model.do_update('log')
     
     def is_player(self):

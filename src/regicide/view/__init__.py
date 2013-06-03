@@ -1,1 +1,1 @@
-import game, inventory, properties, actions, traits
+import game, inventory, properties, actions, traits, world

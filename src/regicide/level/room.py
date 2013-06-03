@@ -5,8 +5,9 @@ Created on 2013-05-16
 '''
 import random
 from regicide import data
-from regicide.level.tile import Tile, TARGET_WALL, TARGET_FLOOR
+from regicide.level.tile import Tile
 from regicide.entity.npc import NPC
+from regicide.data import tiles
 from regicide.data.blueprints import Blueprint
 
 class Room(object):
@@ -65,7 +66,7 @@ class Room(object):
             x, y = location
             
             if room.count_connections() < room.max_connections:
-                tile_map.grid[x][y] = Tile(Tile.DOOR)
+                tile_map.grid[x][y] = Tile(tiles.DOOR)
                 self.add_connection(x, y, room)
                 room.add_connection(x, y, self)
                 wall_list.pop(location)
@@ -121,7 +122,7 @@ class Room(object):
         
     def _is_valid_door_location(self, tile_map, x, y, interior):
         tile = tile_map.get_tile(x, y)
-        if TARGET_WALL in tile.get_target_types():
+        if Tile.TARGET_WALL in tile.get_target_types():
             north = tile_map.get_tile(x, y+1)
             south = tile_map.get_tile(x, y-1)
             west = tile_map.get_tile(x-1, y)
@@ -133,19 +134,19 @@ class Room(object):
                 if empty_tiles > 0:
                     return None
                 
-                if (south is not None and TARGET_WALL in south.get_target_types() and 
-                    north is not None and TARGET_WALL in north.get_target_types() and 
-                    west is not None and TARGET_FLOOR in west.get_target_types() and 
-                    east is not None and TARGET_FLOOR in east.get_target_types()):
+                if (south is not None and Tile.TARGET_WALL in south.get_target_types() and 
+                    north is not None and Tile.TARGET_WALL in north.get_target_types() and 
+                    west is not None and Tile.TARGET_FLOOR in west.get_target_types() and 
+                    east is not None and Tile.TARGET_FLOOR in east.get_target_types()):
                     
                     if west.room is not self:
                         return west.room
                     else:
                         return east.room
-                if (west is not None and TARGET_WALL in west.get_target_types() and 
-                    east is not None and TARGET_WALL in east.get_target_types() and 
-                    south is not None and TARGET_FLOOR in south.get_target_types() and 
-                    north is not None and TARGET_FLOOR in north.get_target_types()):
+                if (west is not None and Tile.TARGET_WALL in west.get_target_types() and 
+                    east is not None and Tile.TARGET_WALL in east.get_target_types() and 
+                    south is not None and Tile.TARGET_FLOOR in south.get_target_types() and 
+                    north is not None and Tile.TARGET_FLOOR in north.get_target_types()):
                     
                     if south.room is not self:
                         return south.room

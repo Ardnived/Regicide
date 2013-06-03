@@ -5,79 +5,31 @@ Created on Mar 2, 2013
 '''
 import random
 from pyglet import sprite
-from regicide.resources import visual
 from regicide.mvc import State
-
-TARGET_SELF     = 'self'
-TARGET_ENTITY   = 'entity'
-TARGET_ITEM     = 'item'
-TARGET_PASSABLE = 'passable'
-TARGET_DOOR     = 'door'
-TARGET_FLOOR    = 'floor'
-TARGET_ROUGH    = 'rough'
-TARGET_WALL     = 'wall'
-TARGET_OPAQUE   = 'opaque'
+from regicide.resources import visual
 
 class Tile(object):
-    
     '''
     A tile for use in a TileMap
     '''
     WIDTH = 20
     HEIGHT = WIDTH
     
-    FLOOR = {
-        'sprites' : [visual.Tile.BLOCK, visual.Tile.BLOCK, visual.Tile.BLOCK_CRACKED],
-        'ascii'   : visual.ASCII.get_index(13, 13), #(11, 3), #(13, 13),
-        'type'    : [TARGET_FLOOR, TARGET_PASSABLE]
-    }
-    
-    LIGHT = {
-        'sprites' : [visual.Tile.PLINTH_EYE],
-        'ascii'   : visual.ASCII.get_index(8, 9),
-        'type'    : [TARGET_FLOOR, TARGET_PASSABLE]
-    }
-    
-    STAIRS_UP = {
-        'sprites' : [visual.Tile.STAIRS_UP],
-        'ascii'   : visual.ASCII.get_index(12, 12),
-        'type'    : [TARGET_ROUGH, TARGET_PASSABLE]
-    }
-    
-    STAIRS_DOWN = {
-        'sprites' : [visual.Tile.STAIRS_DOWN],
-        'ascii'   : visual.ASCII.get_index(14, 12),
-        'type'    : [TARGET_ROUGH, TARGET_PASSABLE]
-    }
-    
-    WALL = {
-        'sprites' : [visual.Tile.PLINTH_LIGHT],
-        'ascii'   : visual.ASCII.get_index(7, 0),
-        'type'    : [TARGET_WALL, TARGET_OPAQUE]
-    }
-    
-    DOOR = {
-        'sprites' : [visual.Tile.GATE_1, visual.Tile.GATE_2, visual.Tile.GATE_3],
-        'ascii'   : visual.ASCII.get_index(10, 13),
-        'type'    : [TARGET_DOOR, TARGET_PASSABLE]
-    }
-    
-    SECRET_DOOR = {
-        'sprites' : [visual.Tile.COLUMNS_GATE],
-        'ascii'   : visual.ASCII.get_index(2, 13),
-        'type'    : [TARGET_DOOR, TARGET_PASSABLE]
-    }
-    
-    DECORATION = {
-        'sprites' : [visual.Tile.TILES],
-        'ascii'   : visual.ASCII.get_index(11, 13),
-        'type'    : [TARGET_PASSABLE]
-    }
+    TARGET_SELF     = 'self'
+    TARGET_ENTITY   = 'entity'
+    TARGET_ITEM     = 'item'
+    TARGET_PASSABLE = 'passable'
+    TARGET_DOOR     = 'door'
+    TARGET_FLOOR    = 'floor'
+    TARGET_ROUGH    = 'rough'
+    TARGET_WALL     = 'wall'
+    TARGET_OPAQUE   = 'opaque'
     
     def __init__(self, template=None, room=None):
         '''
         Constructor
         '''
+        self.template = template #TODO: remove this, it's for testing.
         if template is not None:
             image = template['sprites'][random.randint(0, len(template['sprites'])-1)]
             
@@ -92,6 +44,8 @@ class Tile(object):
         self.explored = True # TODO: This should be False, but I'm testing things atm.
         self._shadow = 8
         
+        self.init(**template['params'])
+        
     @property
     def shadow(self):
         return max(0, min(self._shadow, 8))
@@ -104,13 +58,13 @@ class Tile(object):
         '''
         Returns whether this tile can be entered by an entity.
         '''
-        return TARGET_PASSABLE in self.type
+        return Tile.TARGET_PASSABLE in self.type
         
     def is_opaque(self):
         '''
         Returns whether this tile can be entered by an entity.
         '''
-        return TARGET_OPAQUE in self.type
+        return Tile.TARGET_OPAQUE in self.type
     
     def is_unoccupied(self):
         '''
@@ -122,17 +76,69 @@ class Tile(object):
         target_types = set(self.type)
         
         if self.entity is not None:
-            target_types.add(TARGET_ENTITY)
+            target_types.add(Tile.TARGET_ENTITY)
             
             if State.model() is not None and self.entity == State.model().current_entity:
-                target_types.add(TARGET_SELF)
+                target_types.add(Tile.TARGET_SELF)
         
         if self.items != []:
-            target_types.add(TARGET_ITEM)
+            target_types.add(Tile.TARGET_ITEM)
         
         return target_types
+    
+    def init(self, **args):
+        pass
+    
+    def on_enter(self, game):
+        pass
         
+class Stair(Tile):
+    
+    def init(self, up):
+        self.up = up
         
+    #event
+    def on_enter(self, game):
+        print(self.entity.name+" entered "+str(self))
+        Tile.on_enter(self, game)
+        
+        if self.entity == game.player:
+            x, y, z = game.current_floor_coords
+            
+            if self.up == True:
+                game.current_floor = (x, y, z+1)
+            else:
+                game.current_floor = (x, y, z-1)
+        
+class Gate(Tile):
+    
+    def init(self, direction):
+        self.direction = direction
+        
+    #event
+    def on_enter(self, game):
+        Tile.on_enter(self, game)
+        
+        if self.entity == game.player:
+            x, y, z = game.current_floor_coords
+            
+            game.current_floor = (x + self.direction.x_offset, y + self.direction.y_offset, z + self.direction.z_offset)
+            
+            target_x = game.player.x
+            target_y = game.player.y
+            
+            if self.direction.x > 0:
+                target_x = game.current_floor.map.extended_width - 1
+            elif self.direction.x < 0:
+                target_x = 0
+            
+            if self.direction.y > 0:
+                target_y = game.current_floor.map.extended_height - 1
+            elif self.direction.y < 0:
+                target_y = 0
+                
+            game.move_entity(game.player, (target_x, target_y), events=False)
+    
         
         
         

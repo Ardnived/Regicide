@@ -45,9 +45,9 @@ class ActionsLayer(ActiveListLayer):
         slots = self.rows * self.columns
         i = 0
         for action in player.actions:
-            if (i < slots):
+            if i < slots:
                 x = i / self.rows
-                y = self.rows - (i - self.columns*x) - 1
+                y = i - self.columns*x
                 
                 self.items[x][y].text = action.name
                 self.items[x][y].action = action
@@ -72,10 +72,10 @@ class ActionsLayer(ActiveListLayer):
         
         self.title.text = title
         self.description.text = text
-            
+        
     def on_click(self, model, button, modifiers):
         player = State.model().player
-        index = self.rows - self.selection_y - 1
+        index = self.selection_y
         functions.set_state(model, 'game')
         State.model().execute_action(action.ActionInstance(
             action = player.actions[index],

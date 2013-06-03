@@ -47,9 +47,9 @@ class PropertiesLayer(ActiveListLayer):
         slots = self.rows * self.columns
         i = 0
         for prop in properties.Property.all:
-            if (i < slots):
+            if i < slots:
                 x = i / self.rows
-                y = self.rows - (i - self.rows*x) - 1
+                y = i - self.rows*x
                 
                 name = prop.name
                 value = str(player.get(prop))
@@ -71,23 +71,21 @@ class PropertiesLayer(ActiveListLayer):
     def update_description(self, tile):
         title = ""
         text = ""
-        if (tile.text != ""):
+        if tile.text != "":
             prop = tile.prop
             player = State.model().player
             modifiers = player.get_property_modifiers(prop)
             title = prop.name+" "+str(player.get(prop))
             
-            if (type(prop.base) == properties.Property):
-                text += "   0\n"
+            modifier = str(player.get(prop, True))
+            spacing = " "*(2 - len(modifier))
+            text += "  "+spacing+modifier+"\n"
+            
+            if type(prop.base) == properties.Property:
                 modifier = str(player.get(prop.base))
                 spacing = " "*(2 - len(modifier))
-                name = prop.base.name
-                
+                name = prop.base.name                
                 text += " +"+spacing+modifier+", "+name+"\n"
-            else:
-                modifier = str(player.get(prop, True))
-                spacing = " "*(2 - len(modifier))
-                text += "  "+spacing+modifier+"\n"
             
             for modifier in modifiers:
                 value = modifier[0]

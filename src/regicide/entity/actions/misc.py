@@ -3,8 +3,8 @@ Created on Apr 27, 2013
 
 @author: Devindra
 '''
-from random import randint
-from regicide.level import tile
+import random
+from regicide.level.tile import Tile
 from regicide.entity import properties
 from regicide.entity.actions.action import Action
 
@@ -12,7 +12,7 @@ class Attack(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Attack",
-            targets = [tile.TARGET_ENTITY],
+            targets = [Tile.TARGET_ENTITY],
             description = "",
         )
         
@@ -26,18 +26,19 @@ class Attack(Action):
         damage_sides = source.get(properties.damage_sides)
         
         for _ in xrange(damage_dice):
-            damage += randint(1, damage_sides)
+            damage += random.randint(1, damage_sides)
+        
+        new_hp = target.get(properties.hp, unmodified=True) - damage
+        target.set(properties.hp, new_hp) 
         
         game.log_message(source.name+" attacks "+target.name+" ["+str(target.get(properties.hp))+"] for "+str(damage)+" damage.")
         game.do_update('log')
-        
-        target.set(properties.hp, target.get(properties.hp) - damage) 
 
 class Move(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Move",
-            targets = [tile.TARGET_PASSABLE],
+            targets = [Tile.TARGET_PASSABLE],
             description = "",
         )
         
@@ -46,10 +47,7 @@ class Move(Action):
         if target_tile.entity is not None:
             Attack.execute_attack(game, source, power, target_tile.entity)
         else:
-            game.map.get_tile(source.x, source.y).entity = None
-            target_tile.entity = source
-            source.x = target[0]
-            source.y = target[1]
+            game.move_entity(source, target)
             
             if source == game.player:
                 self.update_exploration(game)

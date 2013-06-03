@@ -14,7 +14,8 @@ from pyglet import event
 from regicide.model import clock
 from regicide.entity import player
 from regicide.data import characters
-from regicide.level import generator, tile
+from regicide.level import world
+from regicide.level.tile import Tile
 from regicide.controller.game import GameHotspot
 
 class Game(event.EventDispatcher, clock.TurnClock):
@@ -27,7 +28,9 @@ class Game(event.EventDispatcher, clock.TurnClock):
         Constructor
         '''
         clock.TurnClock.__init__(self)
-        self.map = generator.CastleGenerator(width=60, height=60).generate()
+        self.world = world.World()
+        self._current_floor = (0, 0, 0)
+        self.world.generate_floor(*self._current_floor)
         
         self.player = player.Player(characters.ELLIOT.master())
         player_tile = None
@@ -35,9 +38,7 @@ class Game(event.EventDispatcher, clock.TurnClock):
             player_location = [randint(0, self.map.width), randint(0, self.map.height)]
             player_tile = self.map.get_tile(*player_location)
         
-        player_tile.entity = self.player
-        self.player.x = player_location[0]
-        self.player.y = player_location[1]
+        self.move_entity(self.player, player_location)
         
         self._accept_input = True
 
@@ -50,11 +51,68 @@ class Game(event.EventDispatcher, clock.TurnClock):
         
         for row in self.map.grid:
             for tile in row:
-                if (tile is not None and tile.entity is not None and type(tile.entity) is not player.Player):
+                if tile is not None and tile.entity is not None and type(tile.entity) is not player.Player:
                     self.schedule_turn(0, tile.entity)
         
         self.schedule_turn(1, self.player)
         self.set_state(Game.STATE_NORMAL)
+        self.current_floor = self._current_floor
+        
+    def move_entity(self, entity, target, events=True):
+        if entity.x is not None and entity.y is not None:
+            origin = self.map.get_tile(entity.x, entity.y)
+            if origin is not None and origin.entity == entity:
+                origin.entity = None
+        
+        if target is not None:
+            x, y = target
+            target_tile = self.map.get_tile(x, y)
+            target_tile.entity = entity
+            entity.x = x
+            entity.y = y
+            
+            if events:
+                target_tile.on_enter(self)
+        else:
+            entity.x = None
+            entity.y = None
+    
+    @property
+    def current_floor_coords(self):
+        return self._current_floor
+    
+    @property
+    def current_floor(self):
+        return self.world.get_floor(*self._current_floor)
+    
+    @current_floor.setter
+    def current_floor(self, coords):
+        x = self.player.x
+        y = self.player.y
+        
+        if self.current_floor.map is not None:
+            self.move_entity(self.player, target=None)
+            
+        self._current_floor = coords
+        
+        if self.current_floor.map is None:
+            self.world.generate_floor(*self._current_floor)
+        
+        floor_x, floor_y, floor_z = coords
+        for direction in self.current_floor.get_connections().iterkeys():
+            floor = self.world.get_floor(floor_x + direction.x_offset, floor_y + direction.y_offset, floor_z + direction.z_offset)
+            floor.known = True
+        
+        self.current_floor.explored = True
+        
+        self.move_entity(self.player, (x, y), events=False)
+        
+        self.log_message("Moved to floor "+str(coords[2]))
+        self.do_update('log')
+    
+    @property
+    def map(self):
+        return self.current_floor.map
     
     #event
     def on_mouse_hover(self, hotspot, mouse_x=0, mouse_y=0):
@@ -110,17 +168,17 @@ class Game(event.EventDispatcher, clock.TurnClock):
                 
                 if len(set(self.target_action.type.targets) & tile_target_types) != 0:
                     return True
-                elif tile.TARGET_WALL in tile_target_types:
+                elif Tile.TARGET_WALL in tile_target_types:
                     return None
                 else:
                     return False
             else:
                 return None
         else:
-            if tile.TARGET_WALL in tile_target_types:
+            if Tile.TARGET_WALL in tile_target_types:
                 return None
             else:
-                return tile.TARGET_ENTITY in tile_target_types
+                return Tile.TARGET_ENTITY in tile_target_types
         
     #event
     def activate_command(self, command):

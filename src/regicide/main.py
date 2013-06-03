@@ -5,6 +5,8 @@ Created on Mar 4, 2013
 
 The main class. Links the program together and then starts the fun.
 '''
+
+from guppy import hpy
 import atexit
 import pyglet
 from regicide.mvc import State
@@ -13,6 +15,9 @@ from regicide.view import window
 
 def on_exit():
     print("Exiting...")
+    #print(hpy().heap())
+    # Previous values,
+    # 33,010,620 / 41,962,120 | Jun 1, 2013
 
 def init_states(window):
     game_model = model.game.Game()
@@ -55,6 +60,14 @@ def init_states(window):
         window     = window,
         model      = game_model,
         view       = view.inventory.InventoryView(window),
+        controller = global_controller,
+        commands   = controller.properties.commands,
+    )
+    
+    State('world',
+        window     = window,
+        model      = game_model,
+        view       = view.world.WorldView(window),
         controller = global_controller,
         commands   = controller.properties.commands,
     )

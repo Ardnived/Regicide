@@ -166,7 +166,6 @@ class GameLayer(Layer, GameHotspot):
             if valid is not None and (absolute_x != model.player.x or absolute_y != model.player.y):
                 path = model.map.find_path(model.map.ALGORITHM_ASTAR, model.player.x, model.player.y, absolute_x, absolute_y)
                 
-                print(str(path))
                 if path is not None:
                     for path_x, path_y in path:
                         self.highlight_tile(path_x, path_y)
@@ -175,7 +174,7 @@ class GameLayer(Layer, GameHotspot):
                     self.highlight_tile(absolute_x, absolute_y)
             
             self.cursor.x = x * self.tile_width + self.x
-            self.cursor.y = y * self.tile_height + self.y
+            self.cursor.y = (self.rows - y - 1) * self.tile_height + self.y
             self.show_cursor = True
         else:
             self.show_cursor = False
@@ -553,7 +552,7 @@ class Inventory(ActiveListLayer):
             
             for i in range(min(len(player.inventory), self.rows)):
                 x = i / self.rows
-                y = self.rows - i - 1
+                y = i
                 item = player.inventory[i]
                 
                 text = ""
@@ -600,7 +599,7 @@ class Actions(ActiveListLayer):
                 action = player.actions[i]
                 
                 x = i / self.rows
-                y = self.rows - i - 1
+                y = i
                 self.items[x][y].text = action.name
                 self.items[x][y].action = action
         
@@ -642,7 +641,7 @@ class Stances(ActiveListLayer):
                 action = player.actions[i]
                 
                 x = i / self.rows
-                y = self.rows - i - 1
+                y = i
                 self.items[x][y].text = action.name
                 self.items[x][y].action = action
         
@@ -673,8 +672,8 @@ class Stances(ActiveListLayer):
            
 class CommandBar(Layer, Hotspot):
     FONT = '<font face="'+GameView.FONT_NAME+'" size="'+str(GameView.COMMAND_BAR_FONT_SIZE)+'" color="white">'
-    BUTTONS = ["<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "<u>L</u>OOK AROUND", "<u>W</u>AIT", "<u>R</u>EST"]
-    ACTIONS = ['view_properties', 'view_actions', 'view_traits', 'look', 'wait', 'rest']
+    BUTTONS = ["<u>M</u>AP", "<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "<u>L</u>OOK AROUND", "<u>W</u>AIT", "<u>R</u>EST"]
+    ACTIONS = ['view_world', 'view_properties', 'view_actions', 'view_traits', 'look', 'wait', 'rest']
     
     def __init__(self, x, y, width, height):
         Layer.__init__(self, x, y, width, height, [255.0, 0.0, 0.0])

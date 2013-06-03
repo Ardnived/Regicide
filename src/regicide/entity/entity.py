@@ -37,13 +37,11 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         self._effects = []
         self._modifiers = {}
         
-        self._base_properties = {}
-        self._properties = {}
+        self._properties_value = {}
+        self._properties_cache = {}
         
         self.set(properties.max_hp, template.properties['hp'])
-        self.set(properties.hp, template.properties['hp'])
         self.set(properties.max_mana, template.properties['mana'])
-        self.set(properties.mana, template.properties['mana'])
         
         self.set(properties.dexterity, template.properties['dexterity'])
         self.set(properties.agility, template.properties['agility'])
@@ -67,40 +65,43 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
             game.do_update('playercard')   
     
     def on_death(self, game):
-        game.map.get_tile(self.x, self.y).entity = None
+        game.move_entity(self, target=None)
         game.log_message(self.name+" dies.")
         game.do_update('log')
         game.end_turn() 
-        
+    
     # ==================================
-        
-    def get(self, prop, base=False):
+    
+    def get(self, prop, unmodified=False):
         '''
         Gets the stored value of one of this entity's properties. 
         Use recalculate_properties(properties) to refresh the data.
         '''
-        if base:
-            if self._base_properties.has_key(prop):
-                return self._base_properties[prop]
-            else:
-                if type(prop.base) == properties.Property:
-                    return self.get(prop.base)
-                else:
-                    return prop.base
+        if unmodified:
+            collection = self._properties_value
         else:
-            if self._properties.has_key(prop):
-                return self._properties[prop]
+            collection = self._properties_cache
+        
+        if collection.has_key(prop):
+            return collection[prop]
+        elif not unmodified:
+            if type(prop.base) == properties.Property:
+                return self.get(prop.base)
             else:
-                return self.get(prop, True)
+                return prop.base
+        else:
+            return 0
     
     def set(self, prop, value):
         '''
         Sets the base value for one of this entity's properties. 
         '''
-        self._base_properties[prop] = value
-        self.recalculate_properties([prop])
+        self._properties_value[prop] = value
+        self.recalculate_properties()
         
-        if value <= 0 and (prop.type == properties.Property.TYPE_ATTR or prop == properties.hp):
+        if value <= 0 and prop.type == properties.Property.TYPE_ATTR:
+            self.dead = True
+        elif prop == properties.hp and value <= -self.get(properties.max_hp):
             self.dead = True
     
     @property
@@ -129,7 +130,7 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         self.remove_modifier(spirit)
         self.remove_handler(spirit)
         
-        if (self.primary_spirit == spirit):
+        if self.primary_spirit == spirit:
             self.primary_spirit = self._spirits[randint(0, len(self._spirits))]
         
     @property
@@ -283,36 +284,55 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         
     # ==================================
     
-    def recalculate_properties(self, update_list = None):
+    def add_handler(self, handler, priority=0):
+        event.FilterDispatcher.add_handler(self, handler, priority)
+        self.recalculate_properties()
+    
+    def remove_handler(self, handler):
+        event.FilterDispatcher.remove_handler(self, handler)
+        self.recalculate_properties()
+    
+    def recalculate_properties(self):
         '''
-        Recalculates each property in a given list.
+        Recalculates all properties.
         This is typically called after property modifiers are added/removed
         '''
-        if update_list is None:
-            update_list = self._base_properties.keys()
+        self._properties_cache.clear()
         
-        for prop in update_list:
-            if type(prop.base) == properties.Property:
-                value = self._base_properties[prop.base]
+        for prop in properties.Property.all:
+            if self._properties_cache.has_key(prop):
+                # We've already recalculated this property
+                continue
             else:
-                value = prop.base
-            
-            if self._base_properties.has_key(prop):
-                value = self._base_properties[prop]
-            
-            self._properties[prop] = self.filter_property(prop, value)
+                if type(prop.base) == properties.Property and not self._properties_cache.has_key(prop.base):
+                    self.recalculate_property(prop.base)
+                
+                self.recalculate_property(prop)
+    
+    def recalculate_property(self, prop):
+        '''
+        Recalculates the given property.
+        '''
+        value = self.get(prop, unmodified=True)
+        
+        if type(prop.base) == properties.Property:
+            value += self.get(prop.base)
+        else:
+            value += prop.base
+        
+        self._properties_cache[prop] = self.filter_property(prop, value)
     
     def filter_property(self, prop, value):
         return self.filter('modify_property', value, prop, self)
         
     def get_property_modifiers(self, prop):
         if type(prop.base) == properties.Property:
-            value = self._base_properties[prop.base]
+            value = self._properties_value[prop.base]
         else:
             value = prop.base
         
-        if (self._base_properties.has_key(prop)):
-            value = self._base_properties[prop]
+        if self._properties_value.has_key(prop):
+            value = self._properties_value[prop]
         
         modifications = []
         for item in self.handlers['modify_property']:

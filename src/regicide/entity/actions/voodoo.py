@@ -8,12 +8,13 @@ from regicide.level import tile
 from regicide.entity import properties
 from regicide.entity.entity import Entity
 from regicide.entity.actions.action import Action
+from regicide.level.tile import Tile
 
 class Possess(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Possess",
-            targets = [tile.TARGET_ENTITY],
+            targets = [Tile.TARGET_ENTITY],
             description = "Take control of an enemy.",
             tags = ['spell', 'voodoo'],
             target_range = 3,
@@ -38,7 +39,7 @@ class Exorcism(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Exorcism",
-            targets = [tile.TARGET_ENTITY],
+            targets = [Tile.TARGET_ENTITY],
             description = "Attempts to remove a chosen spirit from the target.",
             tags = ['spell', 'voodoo']
         )
@@ -61,7 +62,7 @@ class Purge(Action):
     def __init__(self):
         Action.__init__(self,
             name = "Purge",
-            targets = [tile.TARGET_ENTITY],
+            targets = [Tile.TARGET_ENTITY],
             description = "Attempts to remove a chosen spirit from the target.",
             tags = ['spell', 'voodoo']
         )
@@ -73,7 +74,7 @@ class Purge(Action):
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
-        if (strength > resistance):
+        if strength > resistance:
             source.remove_spirit(source.primary_spirit)
         else:
             game.log_message(target.name+" resists.")
@@ -83,7 +84,7 @@ class SummonSpirit(Action):
     
     def __init__(self, name, description, blueprint):
         Action.__init__(self, name, description, 
-            targets = [tile.TARGET_ENTITY, tile.TARGET_ITEM], 
+            targets = [Tile.TARGET_ENTITY, Tile.TARGET_ITEM], 
             tags = ['spell', 'voodoo', 'spirit']
         )
         self.blueprint = blueprint

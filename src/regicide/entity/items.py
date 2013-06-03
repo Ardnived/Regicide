@@ -18,6 +18,9 @@ class Item(object):
         
         if template.properties.has_key('modifiers'):
             self.modifiers = template.properties['modifiers']
+        else:
+            self.modifiers = {}
+        
         if template.properties.has_key('equip_slot'):
             self.equip_slot = template.properties['equip_slot']
         if template.properties.has_key('equip_size'):

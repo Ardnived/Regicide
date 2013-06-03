@@ -48,7 +48,7 @@ class TraitsLayer(ActiveListLayer):
         for trait in player.traits:
             if (i < slots):
                 x = i / self.rows
-                y = self.rows - (i - self.columns*x) - 1
+                y = i - self.columns*x
                 
                 self.items[x][y].text = trait.name
                 self.items[x][y].trait = trait

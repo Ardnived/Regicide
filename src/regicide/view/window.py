@@ -19,8 +19,8 @@ class MasterView(window.Window):
         '''
         :param model: the model that this MasterView is visualizing.
         '''
-        version_name = "Regicide Alpha"
-        window.Window.__init__(self, 1240, 700, version_name, resizable=False)
+        version_name = "Regicide Precursor"
+        window.Window.__init__(self, 1240, 700, "Tyrannicide", resizable=False)
         #self.set_location(0, 0)
         
         self.update_components = set(['all'])
@@ -51,10 +51,10 @@ class MasterView(window.Window):
                 layer.draw()
                 
                 '''
-                x = layer.x
-                y = layer.y
-                x2 = x + layer.width
-                y2 = y + layer.height
+                x = int(layer.x)
+                y = int(layer.y)
+                x2 = int(x + layer.width)
+                y2 = int(y + layer.height)
                 gl.glColor3f(*layer.color)
                 graphics.draw(2, gl.GL_LINES, ('v2i', (x, y, x2, y)))
                 graphics.draw(2, gl.GL_LINES, ('v2i', (x, y, x, y2)))

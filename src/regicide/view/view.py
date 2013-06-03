@@ -36,7 +36,7 @@ class View(object):
         return hotspots
 
 class Layer(object):
-    def __init__(self, x, y, width, height, color):
+    def __init__(self, x, y, width, height, color=(255, 255, 255)):
         '''
         Constructor
         '''
@@ -74,10 +74,20 @@ class ListLayer(Layer):
             
         self.line_height = line_height
         
+        remainder = self.height % self.columns
+        print("Remainder "+str(remainder))
+        
         for col in range(columns):
             column = []
-            for i in range(self.rows):
-                column.append(text.Label(font_name=View.FONT_NAME, font_size=View.FONT_SIZE, x=x+col*self.column_width, y=y+i*line_height, width=column_width, batch=self.batches))
+            for i in xrange(self.rows):
+                column.append(text.Label(
+                    font_name = View.FONT_NAME, 
+                    font_size = View.FONT_SIZE, 
+                    x = x + col*self.column_width, 
+                    y = y + height - (i+1)*line_height, 
+                    width = column_width, 
+                    batch = self.batches
+                ))
             
             self.items.append(column)
     
@@ -92,11 +102,14 @@ class ListLayer(Layer):
 class ActiveListLayer(ListLayer, Hotspot):
     def __init__(self, x, y, width, height, font_name=View.FONT_NAME, font_size=View.FONT_SIZE, line_height=(View.FONT_SIZE*1.2), columns=1, column_width=None):
         ListLayer.__init__(self, x, y, width, height, font_name, font_size, line_height, columns, column_width)
-        Hotspot.__init__(self, x, y, self.column_width*self.columns, self.line_height*self.rows, rows=self.rows, columns=self.columns)
+        
+        hotspot_height = self.line_height*self.rows
+        hotspot_y = y + height - hotspot_height
+        Hotspot.__init__(self, x, hotspot_y, self.column_width*self.columns, hotspot_height, rows=self.rows, columns=self.columns)
     
     def update(self, components = None):
         ListLayer.update(self, components)
-        if (components is None or 'cursor' in components):
+        if components is None or 'cursor' in components:
             self.update_cursor();
         
     def update_cursor(self):
@@ -115,11 +128,11 @@ class ActiveListLayer(ListLayer, Hotspot):
         index_y = 0
         line_height = int(self.height / self.rows)
         for column in self.items:
-            index_y = 0
+            index_y = 1
             for _ in column:
-                x = self.x + index_x*self.column_width
-                y = self.y + index_y*line_height
-                y2 = self.y + index_y*line_height + line_height
+                x = int(self.x + index_x*self.column_width)
+                y = int(self.y + self.height - index_y*line_height)
+                y2 = int(self.y + self.height - index_y*line_height + line_height)
                 
                 gl.glColor3f(*self.color)
                 graphics.draw(2, gl.GL_LINES, ('v2i', (x, y, x+self.column_width-5, y)))
@@ -130,7 +143,7 @@ class ActiveListLayer(ListLayer, Hotspot):
     
     # override
     def get_hover_type(self, x, y):
-        if (self.items[x][y].text != ""):
+        if self.items[x][y].text != "":
             return Hotspot.HOVER_CLICK
         else:
             return Hotspot.HOVER_DEFAULT

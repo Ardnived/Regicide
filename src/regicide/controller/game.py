@@ -80,6 +80,10 @@ commands = CommandSet({
         bindings = [KeyBinding(key.L)],
         action = functions.look,
     ),
+    'view_world': KeyBinder(
+        bindings = [KeyBinding(key.M)],
+        action = partial(functions.set_state, state='world'),
+    ),
     'view_properties': KeyBinder(
         bindings = [KeyBinding(key.P)],
         action = partial(functions.set_state, state='properties'),
