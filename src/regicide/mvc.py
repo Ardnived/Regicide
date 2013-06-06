@@ -15,35 +15,35 @@ class State(object):
     
     @staticmethod
     def model():
-        if (State.exists()):
+        if State.exists():
             return State._current.model
         else:
             return None
     
     @staticmethod
     def view():
-        if (State.exists()):
+        if State.exists():
             return State._current.view
         else:
             return None
     
     @staticmethod
     def controller():
-        if (State.exists()):
+        if State.exists():
             return State._current.controller
         else:
             return None
     
     @staticmethod
     def commands():
-        if (State.exists()):
+        if State.exists():
             return State._current.commands
         else:
             return None
     
     @staticmethod
     def window():
-        if (State.exists()):
+        if State.exists():
             return State._current.window
         else:
             return None
@@ -69,10 +69,10 @@ class State(object):
         State._all[slug] = self
         
     def set_handler(self, source, handler):
-        if (State._links.has_key(source) is False):
+        if State._links.has_key(source) is False:
             source.push_handlers(handler)
             State._links[source] = handler
-        elif (State._links[source] != handler):
+        elif State._links[source] != handler:
             print("Linking Collision: "+str(handler)+" was not assigned to handle "+str(source)+" (mvc.py)")
             
 

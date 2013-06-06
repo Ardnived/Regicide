@@ -19,6 +19,11 @@ from regicide.level.tile import Tile
 from regicide.controller.game import GameHotspot
 
 class Game(event.EventDispatcher, clock.TurnClock):
+    WORLD_ROWS = 1
+    WORLD_COLUMNS = 1
+    WORLD_DEPTH = 0
+    WORLD_HEIGHT = 1
+    
     STATE_NORMAL = 0
     STATE_TARGET = 1
     STATE_EXPLORE = 2
@@ -28,7 +33,7 @@ class Game(event.EventDispatcher, clock.TurnClock):
         Constructor
         '''
         clock.TurnClock.__init__(self)
-        self.world = world.World()
+        self.world = world.World(Game.WORLD_ROWS, Game.WORLD_COLUMNS, Game.WORLD_DEPTH, Game.WORLD_HEIGHT)
         self._current_floor = (0, 0, 0)
         self.world.generate_floor(*self._current_floor)
         
@@ -101,7 +106,8 @@ class Game(event.EventDispatcher, clock.TurnClock):
         floor_x, floor_y, floor_z = coords
         for direction in self.current_floor.get_connections().iterkeys():
             floor = self.world.get_floor(floor_x + direction.x_offset, floor_y + direction.y_offset, floor_z + direction.z_offset)
-            floor.known = True
+            if floor is not None:
+                floor.known = True
         
         self.current_floor.explored = True
         

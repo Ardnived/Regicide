@@ -46,7 +46,7 @@ class Blueprint(object):
         
         output = []
         for blueprint in Blueprint._blueprints_by_domain[primary_key][primary_value]:
-            if (blueprint.has_domains(**domains)):
+            if blueprint.has_domains(**domains):
                 output.append(blueprint)
         
         return output
@@ -58,7 +58,7 @@ class Blueprint(object):
         :param parents: the blueprints to inherit properties from when this blueprint is mastered.
         :param properties: the properties to be resolved when this blueprint is mastered.
         '''
-        if (isinstance(parents, Blueprint)):
+        if isinstance(parents, Blueprint):
             # The Blueprint contructor requires that parents be in a list,
             # but we are simplifying the input syntax by also accepting a single Blueprint.
             parents = [parents]
@@ -67,33 +67,33 @@ class Blueprint(object):
         self.domains = domains
         self.properties = properties
         
-        if (parents is not None):
+        if parents is not None:
             for parent in parents:
                 # Loop through the domains of each parent
                 # and add them to this blueprint.
                 for key, args in parent.domains.iteritems():
-                    if (self.domains.has_key(key) is False):
+                    if self.domains.has_key(key) is False:
                         self.domains[key] = []
-                    elif (type(self.domains[key]) != list):
+                    elif type(self.domains[key]) != list:
                         self.domains[key] = [self.domains[key]]
                     
-                    if (type(args) != list):
+                    if type(args) != list:
                         args = [args]
                     
                     self.domains[key].extend(args)
         
-        if (hidden is False):
+        if hidden is False:
             # If the blueprint isn't hidden, then loop through it's domains,
             # and add it to the class variable that holds a list of blueprints by domain.
             for domain, values in domains.iteritems():
-                if (Blueprint._blueprints_by_domain.has_key(domain) is False):
+                if Blueprint._blueprints_by_domain.has_key(domain) is False:
                     Blueprint._blueprints_by_domain[domain] = {}
                 
-                if (type(values) != list):
+                if type(values) != list:
                     values = [values]
                 
                 for value in values:
-                    if (Blueprint._blueprints_by_domain[domain].has_key(value) is False):
+                    if Blueprint._blueprints_by_domain[domain].has_key(value) is False:
                         Blueprint._blueprints_by_domain[domain][value] = []
                     
                     Blueprint._blueprints_by_domain[domain][value].append(self)
@@ -103,12 +103,12 @@ class Blueprint(object):
         Return whether this blueprint has the specified domain values.
         '''
         for key, items in domains.iteritems():
-            if (self.domains.has_key(key)):
+            if self.domains.has_key(key):
                 if (type(items) != list):
                     items = [items]
                 
                 for item in items:
-                    if (self.domains[key].count(item) <= 0):
+                    if self.domains[key].count(item) <= 0:
                         # Blueprint doesn't have domain value.
                         return False
             else:
@@ -140,7 +140,7 @@ class Factory(object):
         
         mods = self.evaluate(mods)
         
-        if (type(mods) != list):
+        if type(mods) != list:
             mods = [mods]
         
         self.mods = mods
@@ -162,9 +162,9 @@ class Factory(object):
         Evaluates a property to resolve randomization and other functions before mastering.
         '''
         # If the argument is a list:
-        if (type(arg) == list):
+        if type(arg) == list:
             # If the first argument is callable:
-            if (hasattr(arg[0], '__call__')):
+            if hasattr(arg[0], '__call__'):
                 # Call it with the second argument as a parameter.
                 func = arg[0]
                 params = self.evaluate(arg[1])
@@ -200,11 +200,11 @@ class Mod(object):
         '''
         self.properties = properties
         
-        if (Mod._mods_by_category.has_key(category) is False):
+        if Mod._mods_by_category.has_key(category) is False:
             # Create the list for this type if it doesn't already exist.
             Mod._mods_by_category[category] = []
         
-        if (type is not None):
+        if type is not None:
             # Add this mod to the list of such mods.
             Mod._mods_by_category[category].append(self)
     
@@ -213,7 +213,7 @@ class Mod(object):
         Applies this mod to a Master object.
         '''
         for key, value in self.properties.iteritems():
-            if (master.properties.has_key(key)):
+            if master.properties.has_key(key):
                 # Only modify the object if it has the corresponding property to modify.
                 master.properties[key] = master.evaluate(value)
      
@@ -306,13 +306,13 @@ def evaluate_function(func, params):
     The primary purpose of this function is to determine the nature of the params,
     and then call func using them, depending on whether the params are a list, dict, or other.
     '''
-    if (type(params) == list):
+    if type(params) == list:
         value = func(*params)
-    elif (type(params) == dict):
+    elif type(params) == dict:
         value = func(**params)
     else:
         value = func(params)
 
     return value
 
-from regicide.data import items, rooms, units #load data
+from regicide.data import items, rooms, units #@UnusedImport #load data

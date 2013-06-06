@@ -2,9 +2,10 @@
 Created on Apr 27, 2013
 
 @author: Devindra
+
+Spells from the Voodoo magic class.
 '''
 import abc
-from regicide.level import tile
 from regicide.entity import properties
 from regicide.entity.entity import Entity
 from regicide.entity.actions.action import Action
@@ -27,7 +28,7 @@ class Possess(Action):
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
-        if (strength > resistance):
+        if strength > resistance:
             #spirit = source.primary_spirit
             #source.remove_spirit(spirit)
             #target.add_spirit(spirit)
@@ -51,7 +52,7 @@ class Exorcism(Action):
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
-        if (strength > resistance):
+        if strength > resistance:
             pass
             #spirit = source.primary_spirit
             #source.remove_spirit(spirit)
@@ -92,7 +93,7 @@ class SummonSpirit(Action):
     def execute(self, game, source, power, target):
         target = target.entity
         
-        if ( isinstance(target, Entity) ):
+        if isinstance(target, Entity):
             resistance = target.get(properties.spirit)
         else:
             resistance = 0
@@ -100,11 +101,11 @@ class SummonSpirit(Action):
         strength = source.get(properties.voodoo)
         game.log_message(source.name+" casts "+self.name+".") 
                
-        if (strength > resistance):
+        if strength > resistance:
             spirit = self.blueprint.master()
             target.add_spirit(spirit)
             
-            if (source == target):
+            if source == target:
                 game.log_message("You hear a new voice in the back of your head. (not really)")
         else:
             game.log_message(target.name+" resists.")

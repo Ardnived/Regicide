@@ -37,7 +37,6 @@ class Item(object):
     #event
     def modify_property(self, value, prop, entity):
         if prop in self.modifiers.keys():
-            #return self.modifiers[prop]
             modifier = self.modifiers[prop]
             operator = modifier[0]
             modification = modifier[1]

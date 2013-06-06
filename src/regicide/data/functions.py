@@ -15,9 +15,9 @@ def pick(*options):
     Returns one of the given parameters.
     Each option has an equal chance of being chosen.
     '''
-    if (len(options) == 1):
+    if len(options) == 1:
         return options[0]
-    elif (len(options) > 0):
+    elif len(options) > 0:
         return options[randint(0, len(options)-1)]
 
 def chance(*options):
@@ -29,7 +29,7 @@ def chance(*options):
     Options with a higher corresponding chance,
     have a proportionately better chance of being chosen.
     '''
-    if (len(options) == 1):
+    if len(options) == 1:
         return options[0]
     
     # Split the input into a list of values and a list of options.
@@ -40,7 +40,7 @@ def chance(*options):
     
     # Determine which option the choice corresponds to.
     i = 0
-    while (choice > chances[i]):
+    while choice > chances[i]:
         i += 1
         choice -= chances[i]
     

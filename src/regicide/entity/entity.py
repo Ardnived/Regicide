@@ -52,11 +52,18 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         self.recalculate_properties()
         
     def on_turn_start(self, game, entity, time_passed):
-        if self.dead:
+        '''
+        Triggers when an entity starts their turn.
+        
+        :param time_passed: the amount of time passed since this entity's last turn.
+        '''
+        if self.dead: 
+            # If the dead flag has been set, trigger this entity's death and cancel the event.
             self.on_death(game)
             return event.EVENT_CANCELED
         
         if self.effects:
+            # Count down any effects that this entity has on them.
             for effect in self.effects:
                 effect.duration -= time_passed
                 if effect.duration <= 0:
@@ -65,6 +72,9 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
             game.do_update('playercard')   
     
     def on_death(self, game):
+        '''
+        Remove this entity from the game.
+        '''
         game.move_entity(self, target=None)
         game.log_message(self.name+" dies.")
         game.do_update('log')
@@ -284,11 +294,18 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         
     # ==================================
     
+    # override
     def add_handler(self, handler, priority=0):
+        '''
+        Add a property filter to this entity. Then recalculate all existing properties.
+        '''
         event.FilterDispatcher.add_handler(self, handler, priority)
         self.recalculate_properties()
     
     def remove_handler(self, handler):
+        '''
+        Remove a property filter to this entity. Then recalculate all existing properties.
+        '''
         event.FilterDispatcher.remove_handler(self, handler)
         self.recalculate_properties()
     
@@ -323,9 +340,16 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         self._properties_cache[prop] = self.filter_property(prop, value)
     
     def filter_property(self, prop, value):
+        '''
+        Pass the value through a series of filters for the given property, and return the result.
+        '''
         return self.filter('modify_property', value, prop, self)
         
     def get_property_modifiers(self, prop):
+        '''
+        Get the exact modifications that occur when filtering a property
+        so that they can be displayed to the user.
+        '''
         if type(prop.base) == properties.Property:
             value = self._properties_value[prop.base]
         else:
@@ -336,13 +360,15 @@ class Entity(event.FilterDispatcher, event.EventDispatcher):
         
         modifications = []
         for item in self.handlers['modify_property']:
+            # Loop through all the filter handlers.
             handler = item[1]
             func = getattr(handler, 'modify_property')
             response = func(value, prop, self)
             
             if response is not None:
+                # Get the difference between the response and the original value, and store it to return later.
                 modifications.append((response - value, handler.name))
-                value = response
+                value = response # Set the value to the response, for the next cycle.
         
         return modifications
         

@@ -2,6 +2,10 @@
 Created on Apr 13, 2013
 
 @author: Devindra
+
+The controller information used in menu views.
+
+TODO: rename this file
 '''
 from functools import partial
 from pyglet.window import key

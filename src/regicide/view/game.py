@@ -153,7 +153,7 @@ class GameLayer(Layer, GameHotspot):
                 y = self.selection_y
                 
             absolute_x = self.grid_x + x
-            absolute_y = self.grid_y + y
+            absolute_y = self.grid_y + y - 1
             
             valid = model.is_valid_target(absolute_x, absolute_y)
             if valid is None:
@@ -672,8 +672,8 @@ class Stances(ActiveListLayer):
            
 class CommandBar(Layer, Hotspot):
     FONT = '<font face="'+GameView.FONT_NAME+'" size="'+str(GameView.COMMAND_BAR_FONT_SIZE)+'" color="white">'
-    BUTTONS = ["<u>M</u>AP", "<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "<u>L</u>OOK AROUND", "<u>W</u>AIT", "<u>R</u>EST"]
-    ACTIONS = ['view_world', 'view_properties', 'view_actions', 'view_traits', 'look', 'wait', 'rest']
+    BUTTONS = ["<u>P</u>ROPERTIES", "S<u>K</u>ILLS", "<u>T</u>RAITS", "<u>L</u>OOK AROUND", "<u>W</u>AIT", "<u>R</u>EST"]
+    ACTIONS = ['view_properties', 'view_actions', 'view_traits', 'look', 'wait', 'rest']
     
     def __init__(self, x, y, width, height):
         Layer.__init__(self, x, y, width, height, [255.0, 0.0, 0.0])

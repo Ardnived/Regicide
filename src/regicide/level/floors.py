@@ -4,7 +4,8 @@ Created on 2013-05-27
 @author: Devindra
 '''
 from regicide.level.world import Direction
-from regicide.level import generator
+from regicide.level.gen.castle import CastleGenerator
+from regicide.level.gen.single import SingleFloorGenerator
 
 class Floor(object):
     
@@ -32,20 +33,20 @@ class Floor(object):
         else:
             return []
 
-class CastleFloor(Floor, generator.CastleGenerator):
+class CastleFloor(Floor, CastleGenerator):
     
     def __init__(self, depth):
         Floor.__init__(self, depth)
-        generator.CastleGenerator.__init__(self, 
+        CastleGenerator.__init__(self, 
             zone  = "castle", 
             floor = "commons",
         )
     
     def generate(self, **options):
-        self.map = generator.CastleGenerator.generate(self, options)
+        self.map = CastleGenerator.generate(self, options)
         
     def create_stairwell(self, location=None, up=False):
-        location = generator.CastleGenerator.create_stairwell(self, location=location, up=up)
+        location = CastleGenerator.create_stairwell(self, location=location, up=up)
         
         if up:
             self.add_connection(Direction.UP, *location)
@@ -55,8 +56,20 @@ class CastleFloor(Floor, generator.CastleGenerator):
         return location
         
     def create_exit(self, direction=None, location=None):
-        location = generator.CastleGenerator.create_exit(self, direction=direction, location=location)
+        location = CastleGenerator.create_exit(self, direction=direction, location=location)
         
         self.add_connection(direction, *location)
         
         return location
+
+class SingleFloor(Floor, SingleFloorGenerator):
+    
+    def __init__(self, depth):
+        Floor.__init__(self, depth)
+        SingleFloorGenerator.__init__(self, 
+            zone  = "castle", 
+            floor = "commons",
+        )
+    
+    def generate(self, **options):
+        self.map = SingleFloorGenerator.generate(self, options)

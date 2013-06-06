@@ -21,7 +21,7 @@ def on_exit():
 
 def init_states(window):
     game_model = model.game.Game()
-    global_controller = controller.controller.Controller(game_model)
+    global_controller = controller.controller.Controller()
     
     print("Initializing Game States...")
     State('game',

@@ -2,6 +2,8 @@
 Created on Apr 9, 2013
 
 @author: Devindra
+
+The controller information specific to the standard game view.
 '''
 from functools import partial
 from pyglet.window import key
@@ -9,6 +11,9 @@ from regicide.controller.hotspot import Hotspot
 from regicide.controller.commands import CommandSet, KeyBinder, KeyBinding
 from regicide.controller import functions
 
+'''
+Commands which the player can use when this file is in use.
+'''
 commands = CommandSet({
     'north': KeyBinder(
         bindings = [
@@ -19,7 +24,7 @@ commands = CommandSet({
     ),
     'northwest': KeyBinder(
         bindings = [
-                    KeyBinding(key.NUM_7, KeyBinding.TYPE_REPEAT),
+            KeyBinding(key.NUM_7, KeyBinding.TYPE_REPEAT),
         ],
         action = partial(functions.move, x=-1, y=1),
     ),
@@ -81,7 +86,7 @@ commands = CommandSet({
         action = functions.look,
     ),
     'view_world': KeyBinder(
-        bindings = [KeyBinding(key.M)],
+        bindings = [],#[KeyBinding(key.M)],
         action = partial(functions.set_state, state='world'),
     ),
     'view_properties': KeyBinder(
@@ -103,11 +108,19 @@ commands = CommandSet({
 })
 
 class GameHotspot(Hotspot):
+    '''
+    A special kind of hotspot for viewing the game map.
+    
+    TODO: Fix a bug with this classes where when you hove and click on this GameHotspot, it doesn't correspond to the correct tile.
+    '''
     
     def __init__(self, x, y, width, height, rows=1, columns=1, hover_type=Hotspot.HOVER_HIDDEN):
         Hotspot.__init__(self, x, y, width, height, rows, columns, hover_type)
         
     def on_click(self, model, button, modifiers):
+        '''
+        We need to determine which direction the player clicked in and then trigger the appropriate move action.
+        '''
         if self.selection_x != model.player.x or self.selection_y != model.player.y:
             player_x = model.player.x
             player_y = model.player.y
@@ -137,6 +150,9 @@ class GameHotspot(Hotspot):
                     model.activate_command(commands.get('east'))
     
     def on_select(self, model, x, y):
+        '''
+        The player just hovered over a tile, update the UI to indicate what is present in the tile.
+        '''
         Hotspot.on_select(self, model, x, y)
         
         tile = model.map.get_tile(self.grid_x + x, self.grid_y + y)

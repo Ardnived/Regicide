@@ -49,7 +49,7 @@ ELLIOT = Blueprint(
 HELENA = Blueprint(
     parents = CHARACTER,
     properties = {
-        'name'     : "Helena",
+        'name'     : "Helen",
         'portrait' : visual.Character.HELENA,
         '+hp'      : 1,
         '+mana'    : -1,
@@ -64,7 +64,7 @@ HELENA = Blueprint(
 LANCEL = Blueprint(
     parents = CHARACTER,
     properties = {
-        'name'     : "Lancel",
+        'name'     : "Aristo",
         'portrait' : visual.Character.LANCEL,
         '+hp'      : 4,
         '+mana'    : -2,
@@ -79,7 +79,7 @@ LANCEL = Blueprint(
 VIVIEN = Blueprint(
     parents = CHARACTER,
     properties = {
-        'name'     : "Vivien",
+        'name'     : "Leana",
         'portrait' : visual.Character.VIVIEN,
         '+hp'      : 1,
         '+mana'    : 1,

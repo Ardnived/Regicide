@@ -151,3 +151,20 @@ KITCHEN = Blueprint(
     },
 )
 
+THRONE_ROOM = Blueprint(
+    parents = ROOM,
+    domains = {
+        'type': 'throne',
+        'floor': 'commons',
+        'zone': 'castle',
+    },
+    properties = {
+        'name': "Throne Room",
+        'width': [pick, range(5, 8)],
+        'height': [pick, range(5, 8)],
+        'guards': [{'race': 'goblin'}],
+        'connections': ['room'],
+        'max_connections': 3,
+    },
+)
+

@@ -2,6 +2,8 @@
 Created on Apr 27, 2013
 
 @author: Devindra
+
+Miscelleneous actions, such as attacking and moving.
 '''
 import random
 from regicide.level.tile import Tile

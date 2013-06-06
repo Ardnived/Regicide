@@ -45,16 +45,19 @@ class FloorDisplayLayer(Layer, Hotspot):
     
     def __init__(self, x, y, width, height):
         Layer.__init__(self, x, y, width, height)
-        Hotspot.__init__(self, x, y, width, height, rows=World.DEFAULT_LENGTH_X, columns=World.DEFAULT_LENGTH_Y)
         
     def update(self, components = None):
+        world = State.model().game
         Layer.update(self, components)
+        
+        Hotspot.__init__(self, self.x, self.y, self.width, self.height, world.rows, world.columns)
         
         if components is None or 'cursor' in components:
             self.update_cursor();
         elif components == None:
             y = 0
-            for depth, floor in World.FLOORS.iteritems():
+            for depth in xrange(-world.depth, world.height):
+                floor = World.FLOORS[depth]
                 self.items[0][y].text = floor['name']
                 self.items[0][y].depth = depth
                 y += 1

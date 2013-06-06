@@ -2,6 +2,8 @@
 Created on 2013-05-30
 
 @author: Devindra
+
+Data definitions for all tiles in the game.
 '''
 from regicide.resources import visual
 from regicide.level.tile import Tile, Stair, Gate

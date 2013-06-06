@@ -9,6 +9,7 @@ class Direction:
     AXIS_X = 0
     AXIS_Y = 1
     AXIS_Z = 3
+    
     UP = None
     DOWN = None
     NORTH = None
@@ -46,80 +47,77 @@ Direction.SOUTH.opposite = Direction.NORTH
 Direction.EAST.opposite = Direction.WEST
 Direction.WEST.opposite = Direction.EAST
 
-from regicide.level import generator
-from regicide.level.floors import CastleFloor
+from regicide.level.gen.single import SingleFloorGenerator
+from regicide.level.floors import CastleFloor, SingleFloor
 
 class World(object):
     '''
     Contains a three dimensional grid of all the floors in the game.
     '''
-    DEFAULT_LENGTH_X = 10
-    DEFAULT_LENGTH_Y = 10
+    BOTTOM = -2
+    TOP = 4
     FLOORS = {
-        -2: {
+        BOTTOM: {
             'name': "Depths",
-            'generator': generator.CastleGenerator(),
             'zone': 'depths',
             'types': [CastleFloor],
             'fill': True,
         },
         -1: {
             'name': "Dungeon",
-            'generator': generator.CastleGenerator(),
             'zone': 'underground',
             'types': [CastleFloor],
             'fill': True,
         },
         0: {
             'name': "Ground Floor",
-            'generator': generator.CastleGenerator(),
             'zone': 'castle',
-            'types': [CastleFloor],
+            'types': [SingleFloor],
             'fill': True,
         },
         1: {
             'name': "Floor 1",
-            'generator': generator.CastleGenerator(),
             'zone': 'castle',
             'types': [CastleFloor],
             'fill': True,
         },
         2: {
             'name': "Floor 2",
-            'generator': generator.CastleGenerator(),
             'zone': 'tower',
             'types': [CastleFloor],
             'fill': False,
         },
         3: {
             'name': "Floor 3",
-            'generator': generator.CastleGenerator(),
             'zone': 'tower',
             'types': [CastleFloor],
             'fill': False,
         },
-        4: {
+        TOP: {
             'name': "Floor 4",
-            'generator': generator.CastleGenerator(),
+            'generator': SingleFloorGenerator(),
             'zone': 'tower',
             'types': [CastleFloor],
             'fill': False,
         },
     }
 
-    def __init__(self, x_length=DEFAULT_LENGTH_X, y_length=DEFAULT_LENGTH_Y):
+    def __init__(self, x_length, y_length, depth=abs(BOTTOM), height=TOP+1):
         '''
         Constructor
         '''
         self._grid = []
         self.columns = x_length
         self.rows = y_length
+        self.depth = depth
+        self.height = height
         
         for _ in xrange(x_length):
             row = []
             for _ in xrange(y_length):
                 column = []
-                for depth, floor in World.FLOORS.iteritems():
+                for depth in xrange(-depth, height):
+                    floor = World.FLOORS[depth]
                     column.append(random.choice(floor['types'])(depth))
                 row.append(column)
             self._grid.append(row)
@@ -154,7 +152,7 @@ class World(object):
             floor_y = y + direction.y_offset
             floor_z = z + direction.z_offset
             
-            if floor_x >= 0 and floor_x < self.columns and floor_y >= 0 and floor_y < self.rows:
+            if floor_x >= 0 and floor_x < self.columns and floor_y >= 0 and floor_y < self.rows and floor_z >= -self.depth and floor_z < self.height:
                 try:
                     floor = self._grid[floor_x][floor_y][floor_z]
                 except IndexError:

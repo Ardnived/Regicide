@@ -2,10 +2,11 @@
 Created on Apr 27, 2013
 
 @author: Devindra
+
+Various effects that can be added to an entity. These effects can affect any of the entity's properties or actions.
 '''
 import math
 from random import randint
-from pyglet.event import EVENT_HANDLED
 from regicide.entity import properties
 
 class Effect(object):
@@ -25,11 +26,11 @@ class Effect(object):
         self.stack_type = stack_type
         
     def stack(self, duration, intensity):
-        if ( self.stack_type == Effect.STACK_INTENSITY ):
+        if self.stack_type == Effect.STACK_INTENSITY:
             self.intensity += intensity
-        elif ( self.stack_type == Effect.STACK_DURATION ):
+        elif self.stack_type == Effect.STACK_DURATION:
             self.duration += duration
-        elif ( self.stack_type == Effect.STACK_REFRESH ):
+        elif self.stack_type == Effect.STACK_REFRESH:
             self.duration = max(self.duration, duration)
     
 class Bleeding(Effect):
